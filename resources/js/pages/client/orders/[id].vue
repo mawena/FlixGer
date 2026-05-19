@@ -123,7 +123,7 @@ const daysLeft = computed(() => {
               class="mt-3"
             >
               <strong>{{ daysLeft }} jour(s)</strong> avant expiration.
-              <RouterLink to="/flixger/catalog" class="ms-1">Renouveler maintenant</RouterLink>
+              <RouterLink to="/catalog" class="ms-1">Renouveler maintenant</RouterLink>
             </VAlert>
           </VCardText>
         </VCard>

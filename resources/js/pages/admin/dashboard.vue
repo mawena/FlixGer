@@ -142,7 +142,7 @@ const statusLabel = (status) => {
                 <VIcon icon="tabler-shopping-cart" class="me-2" />
                 Commandes récentes
               </span>
-              <RouterLink to="/flixger/admin/orders">
+              <RouterLink to="/admin/orders">
                 <VBtn variant="text" size="small" color="primary">Voir tout</VBtn>
               </RouterLink>
             </VCardTitle>

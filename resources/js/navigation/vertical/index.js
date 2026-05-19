@@ -2,27 +2,27 @@ const adminNav = [
   {
     title: 'Tableau de bord',
     icon: { icon: 'tabler-layout-dashboard' },
-    to: 'flixger-admin-dashboard',
+    to: 'admin-dashboard',
   },
   {
     title: 'Plateformes',
     icon: { icon: 'tabler-brand-netflix' },
-    to: 'flixger-admin-platforms',
+    to: 'admin-platforms',
   },
   {
     title: 'Comptes maîtres',
     icon: { icon: 'tabler-key' },
-    to: 'flixger-admin-accounts',
+    to: 'admin-accounts',
   },
   {
     title: 'Profils / Écrans',
     icon: { icon: 'tabler-user-circle' },
-    to: 'flixger-admin-profiles',
+    to: 'admin-profiles',
   },
   {
     title: 'Commandes',
     icon: { icon: 'tabler-shopping-cart' },
-    to: 'flixger-admin-orders',
+    to: 'admin-orders',
   },
 ]
 
@@ -30,17 +30,17 @@ const clientNav = [
   {
     title: 'Mon espace',
     icon: { icon: 'tabler-home' },
-    to: 'flixger-client-dashboard',
+    to: 'client-dashboard',
   },
   {
     title: 'Mes abonnements',
     icon: { icon: 'tabler-device-tv' },
-    to: 'flixger-client-orders',
+    to: 'client-orders',
   },
   {
     title: 'Catalogue',
     icon: { icon: 'tabler-apps' },
-    to: 'flixger-catalog',
+    to: 'catalog',
   },
 ]
 
