@@ -7,16 +7,16 @@ export const redirects = [
   {
     path: '/',
     name: 'index',
-    redirect: to => {
-      // TODO: Get type from backend
+    redirect: () => {
       const userData = useCookie('userData')
       const userRole = userData.value?.role
       if (userRole === 'admin')
-        return { name: 'flixger-admin-dashboard' }
+        return { name: 'admin-dashboard' }
       if (userRole === 'client')
-        return { name: 'flixger-client-dashboard' }
-      
-      return { name: 'login', query: to.query }
+        return { name: 'client-dashboard' }
+
+      // Guests go to the catalog (public landing page)
+      return { name: 'catalog' }
     },
   },
   {

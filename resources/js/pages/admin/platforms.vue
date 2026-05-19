@@ -12,6 +12,7 @@ const dialog = ref(false)
 const deleteDialog = ref(false)
 const saving = ref(false)
 const selectedPlatform = ref(null)
+const formErrors = ref({})
 
 const form = ref({
   name: '',
@@ -40,29 +41,32 @@ onMounted(fetchPlatforms)
 
 const openCreate = () => {
   selectedPlatform.value = null
+  formErrors.value = {}
   form.value = { name: '', logo_url: '', price_per_month: '', active: true }
   dialog.value = true
 }
 
 const openEdit = (p) => {
   selectedPlatform.value = p
+  formErrors.value = {}
   form.value = { name: p.name, logo_url: p.logo_url || '', price_per_month: p.price_per_month, active: p.active }
   dialog.value = true
 }
 
 const save = async () => {
   saving.value = true
+  formErrors.value = {}
   try {
-    if (selectedPlatform.value) {
-      await useApi(`/admin/platforms/${selectedPlatform.value.id}`, {
-        method: 'PUT',
-        body: JSON.stringify(form.value),
-      })
-    } else {
-      await useApi('/admin/platforms', {
-        method: 'POST',
-        body: JSON.stringify(form.value),
-      })
+    const url = selectedPlatform.value
+      ? `/admin/platforms/${selectedPlatform.value.id}`
+      : '/admin/platforms'
+    const { error } = await useApi(url, {
+      method: selectedPlatform.value ? 'PUT' : 'POST',
+      body: JSON.stringify(form.value),
+    })
+    if (error.value) {
+      formErrors.value = error.value?.data?.errors || {}
+      return
     }
     dialog.value = false
     await fetchPlatforms()
@@ -90,10 +94,16 @@ const deletePlatform = async () => {
         <h2 class="text-h5 font-weight-bold">Plateformes</h2>
         <p class="text-body-2 text-medium-emphasis">Gérez les plateformes de streaming</p>
       </div>
-      <VBtn color="primary" @click="openCreate">
-        <VIcon start icon="tabler-plus" />
-        Nouvelle plateforme
-      </VBtn>
+      <div class="d-flex gap-2">
+        <VBtn variant="outlined" :loading="loading" @click="fetchPlatforms">
+          <VIcon start icon="tabler-refresh" />
+          Recharger
+        </VBtn>
+        <VBtn color="primary" @click="openCreate">
+          <VIcon start icon="tabler-plus" />
+          Nouvelle plateforme
+        </VBtn>
+      </div>
     </div>
 
     <VCard>
@@ -142,13 +152,17 @@ const deletePlatform = async () => {
           {{ selectedPlatform ? 'Modifier la plateforme' : 'Nouvelle plateforme' }}
         </VCardTitle>
         <VCardText>
-          <VTextField v-model="form.name" label="Nom de la plateforme" class="mb-3" />
-          <VTextField v-model="form.logo_url" label="URL du logo" class="mb-3" />
+          <VAlert v-if="formErrors._general" type="error" variant="tonal" density="compact" class="mb-4">
+            {{ formErrors._general }}
+          </VAlert>
+          <VTextField v-model="form.name" label="Nom de la plateforme" :error-messages="formErrors.name" class="mb-3" />
+          <VTextField v-model="form.logo_url" label="URL du logo" :error-messages="formErrors.logo_url" class="mb-3" />
           <VTextField
             v-model="form.price_per_month"
             label="Prix par mois (XOF)"
             type="number"
             min="0"
+            :error-messages="formErrors.price_per_month"
             class="mb-3"
           />
           <VSwitch v-model="form.active" label="Plateforme active" color="primary" />

@@ -90,7 +90,9 @@ const markVerified = async (order) => {
 }
 
 const screenshotUrl = (order) => {
-  return `/api/admin/orders/${order.id}/screenshot`
+  return order?.payment_screenshot
+    ? `/storage/${order.payment_screenshot}`
+    : null
 }
 
 const statusColor = s => ({ pending: 'warning', approved: 'success', rejected: 'error' }[s] || 'default')
@@ -104,6 +106,10 @@ const statusLabel = s => ({ pending: 'En attente', approved: 'Validée', rejecte
         <h2 class="text-h5 font-weight-bold">Gestion des Commandes</h2>
         <p class="text-body-2 text-medium-emphasis">Validez les paiements et assignez les accès</p>
       </div>
+      <VBtn variant="outlined" :loading="loading" @click="fetchOrders">
+        <VIcon start icon="tabler-refresh" />
+        Recharger
+      </VBtn>
     </div>
 
     <!-- Status filter tabs -->
@@ -225,12 +231,23 @@ const statusLabel = s => ({ pending: 'En attente', approved: 'Validée', rejecte
           <!-- Screenshot -->
           <p class="text-caption font-weight-bold text-medium-emphasis mb-2">REÇU T-MONEY</p>
           <div class="screenshot-container mb-4">
-            <img
-              :src="screenshotUrl(selectedOrder)"
-              alt="Reçu T-Money"
-              class="screenshot-img"
-              @error="e => e.target.style.display='none'"
-            >
+            <template v-if="screenshotUrl(selectedOrder)">
+              <a :href="screenshotUrl(selectedOrder)" target="_blank" rel="noopener">
+                <img
+                  :src="screenshotUrl(selectedOrder)"
+                  alt="Reçu T-Money"
+                  class="screenshot-img"
+                  @error="e => e.target.closest('a').innerHTML = '<span class=\'text-caption text-medium-emphasis\'>Impossible de charger l\'image</span>'"
+                >
+              </a>
+              <p class="text-caption text-medium-emphasis mt-1">
+                <VIcon icon="tabler-external-link" size="12" class="me-1" />
+                Cliquez sur l'image pour l'agrandir
+              </p>
+            </template>
+            <VAlert v-else type="warning" variant="tonal" density="compact">
+              Aucune capture d'écran disponible
+            </VAlert>
             <div class="d-flex gap-2 mt-2">
               <VBtn
                 v-if="!selectedOrder.payment_verified"

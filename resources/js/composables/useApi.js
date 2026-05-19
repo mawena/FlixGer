@@ -18,13 +18,20 @@ export const useApi = createFetch({
           Authorization: `Bearer ${accessToken}`,
         }
       }
-      
+
+      // Auto-set Content-Type for JSON string bodies
+      if (typeof options.body === 'string' && options.method && options.method !== 'GET') {
+        options.headers = {
+          ...options.headers,
+          'Content-Type': 'application/json',
+        }
+      }
+
       return { options }
     },
     afterFetch(ctx) {
       const { data, response } = ctx
 
-      // Parse data if it's JSON
       let parsedData = null
       try {
         parsedData = destr(data)
@@ -32,7 +39,7 @@ export const useApi = createFetch({
       catch (error) {
         console.error(error)
       }
-      
+
       return { data: parsedData, response }
     },
   },

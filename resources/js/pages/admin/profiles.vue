@@ -12,6 +12,7 @@ const loading = ref(true)
 const dialog = ref(false)
 const saving = ref(false)
 const selectedProfile = ref(null)
+const formErrors = ref({})
 const filterStatus = ref(null)
 const filterPlatform = ref(null)
 
@@ -51,17 +52,23 @@ watch([filterStatus, filterPlatform], fetchData)
 
 const openEdit = (p) => {
   selectedProfile.value = p
+  formErrors.value = {}
   form.value = { profile_name: p.profile_name, pin_code: p.pin_code || '', status: p.status }
   dialog.value = true
 }
 
 const save = async () => {
   saving.value = true
+  formErrors.value = {}
   try {
-    await useApi(`/admin/profiles/${selectedProfile.value.id}`, {
+    const { error } = await useApi(`/admin/profiles/${selectedProfile.value.id}`, {
       method: 'PUT',
       body: JSON.stringify(form.value),
     })
+    if (error.value) {
+      formErrors.value = error.value?.data?.errors || {}
+      return
+    }
     dialog.value = false
     await fetchData()
   } finally {
@@ -87,6 +94,10 @@ const statusLabel = s => s === 'available' ? 'Disponible' : 'Assigné'
         <h2 class="text-h5 font-weight-bold">Profils / Écrans</h2>
         <p class="text-body-2 text-medium-emphasis">Gérez les écrans de chaque compte</p>
       </div>
+      <VBtn variant="outlined" :loading="loading" @click="fetchData">
+        <VIcon start icon="tabler-refresh" />
+        Recharger
+      </VBtn>
     </div>
 
     <!-- Filters -->
@@ -167,12 +178,13 @@ const statusLabel = s => s === 'available' ? 'Disponible' : 'Assigné'
       <VCard>
         <VCardTitle class="pa-4">Modifier le profil</VCardTitle>
         <VCardText>
-          <VTextField v-model="form.profile_name" label="Nom du profil" class="mb-3" />
-          <VTextField v-model="form.pin_code" label="Code PIN (optionnel)" class="mb-3" />
+          <VTextField v-model="form.profile_name" label="Nom du profil" :error-messages="formErrors.profile_name" class="mb-3" />
+          <VTextField v-model="form.pin_code" label="Code PIN (optionnel)" :error-messages="formErrors.pin_code" class="mb-3" />
           <VSelect
             v-model="form.status"
             :items="[{ title: 'Disponible', value: 'available' }, { title: 'Assigné', value: 'occupied' }]"
             label="Statut"
+            :error-messages="formErrors.status"
           />
         </VCardText>
         <VCardActions class="pa-4">

@@ -72,7 +72,7 @@ const onSubmit = () => {
 </script>
 
 <template>
-  <RouterLink to="/flixger/catalog">
+  <RouterLink to="/catalog">
     <div class="auth-logo d-flex align-center gap-x-3">
       <VNodeRenderer :nodes="themeConfig.app.logo" />
       <h1 class="auth-title">

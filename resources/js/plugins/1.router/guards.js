@@ -28,6 +28,10 @@ export const setupGuards = router => {
       else
         return undefined
     }
+
+    // Allow catalog & order without login (redundant with meta.public but explicit)
+    if (to.name === 'catalog' || to.name === 'order')
+      return
     if (!canNavigate(to) && to.matched.length) {
       /* eslint-disable indent */
             return isLoggedIn

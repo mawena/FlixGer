@@ -47,12 +47,13 @@ class MasterAccountController extends Controller
         return response()->json($account->load('profiles'), 201);
     }
 
-    public function show(MasterAccount $masterAccount)
+    // Paramètre nommé $account pour correspondre au {account} de la route apiResource
+    public function show(MasterAccount $account)
     {
-        return response()->json($masterAccount->load(['platform', 'profiles']));
+        return response()->json($account->load(['platform', 'profiles']));
     }
 
-    public function update(Request $request, MasterAccount $masterAccount)
+    public function update(Request $request, MasterAccount $account)
     {
         $data = $request->validate([
             'email'    => 'sometimes|email',
@@ -61,14 +62,14 @@ class MasterAccountController extends Controller
             'notes'    => 'nullable|string',
         ]);
 
-        $masterAccount->update($data);
+        $account->update($data);
 
-        return response()->json($masterAccount->load('profiles'));
+        return response()->json($account->load('profiles'));
     }
 
-    public function destroy(MasterAccount $masterAccount)
+    public function destroy(MasterAccount $account)
     {
-        $masterAccount->delete();
+        $account->delete();
 
         return response()->json(null, 204);
     }

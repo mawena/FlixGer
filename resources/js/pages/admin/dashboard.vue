@@ -36,9 +36,15 @@ const statusLabel = (status) => {
 
 <template>
   <div>
-    <div class="mb-6">
-      <h2 class="text-h5 font-weight-bold">Tableau de bord</h2>
-      <p class="text-body-2 text-medium-emphasis">Vue d'ensemble de votre activité FlixGer</p>
+    <div class="d-flex justify-space-between align-center mb-6">
+      <div>
+        <h2 class="text-h5 font-weight-bold">Tableau de bord</h2>
+        <p class="text-body-2 text-medium-emphasis mb-0">Vue d'ensemble de votre activité FlixGer</p>
+      </div>
+      <VBtn variant="outlined" :loading="loading" @click="fetchDashboard">
+        <VIcon start icon="tabler-refresh" />
+        Recharger
+      </VBtn>
     </div>
 
     <VProgressCircular v-if="loading" indeterminate color="primary" class="d-block mx-auto my-8" />

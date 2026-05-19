@@ -10,9 +10,11 @@ const accounts = ref([])
 const platforms = ref([])
 const loading = ref(true)
 const dialog = ref(false)
+const deleteDialog = ref(false)
+const deleting = ref(false)
 const saving = ref(false)
 const selectedAccount = ref(null)
-const expandedAccounts = ref([])
+const formErrors = ref({})
 
 const form = ref({
   platform_id: null,
@@ -46,12 +48,14 @@ onMounted(fetchData)
 
 const openCreate = () => {
   selectedAccount.value = null
+  formErrors.value = {}
   form.value = { platform_id: null, email: '', password: '', status: 'active', notes: '', nb_profiles: 4 }
   dialog.value = true
 }
 
 const openEdit = (acc) => {
   selectedAccount.value = acc
+  formErrors.value = {}
   form.value = {
     platform_id: acc.platform_id,
     email: acc.email,
@@ -65,18 +69,27 @@ const openEdit = (acc) => {
 
 const save = async () => {
   saving.value = true
+  formErrors.value = {}
   try {
-    if (selectedAccount.value) {
-      await useApi(`/admin/accounts/${selectedAccount.value.id}`, {
-        method: 'PUT',
-        body: JSON.stringify(form.value),
-      })
-    } else {
-      await useApi('/admin/accounts', {
-        method: 'POST',
-        body: JSON.stringify(form.value),
-      })
+    const url = selectedAccount.value
+      ? `/admin/accounts/${selectedAccount.value.id}`
+      : '/admin/accounts'
+    const method = selectedAccount.value ? 'PUT' : 'POST'
+
+    const { data, error } = await useApi(url, {
+      method,
+      body: JSON.stringify(form.value),
+    })
+
+    if (error.value) {
+      const errData = error.value?.data || error.value
+      formErrors.value = errData?.errors || {}
+      if (!Object.keys(formErrors.value).length && errData?.message) {
+        formErrors.value._general = errData.message
+      }
+      return
     }
+
     dialog.value = false
     await fetchData()
   } finally {
@@ -84,10 +97,26 @@ const save = async () => {
   }
 }
 
-const deleteAccount = async (acc) => {
-  if (confirm(`Supprimer le compte ${acc.email} ?`)) {
-    await useApi(`/admin/accounts/${acc.id}`, { method: 'DELETE' })
+const openDelete = (acc) => {
+  selectedAccount.value = acc
+  deleteDialog.value = true
+}
+
+const confirmDelete = async () => {
+  deleting.value = true
+  try {
+    await fetch(`/api/admin/accounts/${selectedAccount.value.id}`, {
+      method: 'DELETE',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${useCookie('accessToken').value}`,
+      },
+    })
+    deleteDialog.value = false
+    selectedAccount.value = null
     await fetchData()
+  } finally {
+    deleting.value = false
   }
 }
 
@@ -102,10 +131,16 @@ const profileStatusColor = s => s === 'available' ? 'success' : 'warning'
         <h2 class="text-h5 font-weight-bold">Comptes Maîtres</h2>
         <p class="text-body-2 text-medium-emphasis">Gérez les comptes de streaming et leurs profils</p>
       </div>
-      <VBtn color="primary" @click="openCreate">
-        <VIcon start icon="tabler-plus" />
-        Ajouter un compte
-      </VBtn>
+      <div class="d-flex gap-2">
+        <VBtn variant="outlined" :loading="loading" @click="fetchData">
+          <VIcon start icon="tabler-refresh" />
+          Recharger
+        </VBtn>
+        <VBtn color="primary" @click="openCreate">
+          <VIcon start icon="tabler-plus" />
+          Ajouter un compte
+        </VBtn>
+      </div>
     </div>
 
     <VCard>
@@ -138,12 +173,11 @@ const profileStatusColor = s => s === 'available' ? 'success' : 'warning'
           <VBtn icon size="small" variant="text" @click="openEdit(item)">
             <VIcon icon="tabler-edit" />
           </VBtn>
-          <VBtn icon size="small" variant="text" color="error" @click="deleteAccount(item)">
+          <VBtn icon size="small" variant="text" color="error" @click="openDelete(item)">
             <VIcon icon="tabler-trash" />
           </VBtn>
         </template>
 
-        <!-- Expanded row: show profiles -->
         <template #expanded-row="{ item }">
           <tr>
             <td :colspan="headers.length + 1" class="pa-0">
@@ -179,19 +213,37 @@ const profileStatusColor = s => s === 'available' ? 'success' : 'warning'
           {{ selectedAccount ? 'Modifier le compte' : 'Ajouter un compte' }}
         </VCardTitle>
         <VCardText>
+          <VAlert
+            v-if="formErrors._general"
+            type="error"
+            variant="tonal"
+            density="compact"
+            class="mb-4"
+          >
+            {{ formErrors._general }}
+          </VAlert>
+
           <VSelect
             v-model="form.platform_id"
             :items="platforms"
             item-title="name"
             item-value="id"
             label="Plateforme"
+            :error-messages="formErrors.platform_id"
             class="mb-3"
           />
-          <VTextField v-model="form.email" label="Email du compte" type="email" class="mb-3" />
+          <VTextField
+            v-model="form.email"
+            label="Email du compte"
+            type="email"
+            :error-messages="formErrors.email"
+            class="mb-3"
+          />
           <VTextField
             v-model="form.password"
             label="Mot de passe"
             :placeholder="selectedAccount ? 'Laisser vide pour ne pas modifier' : ''"
+            :error-messages="formErrors.password"
             class="mb-3"
           />
           <VSelect
@@ -207,15 +259,46 @@ const profileStatusColor = s => s === 'available' ? 'success' : 'warning'
             type="number"
             min="1"
             max="10"
+            :error-messages="formErrors.nb_profiles"
             class="mb-3"
           />
-          <VTextarea v-model="form.notes" label="Notes (optionnel)" rows="2" />
+          <VTextarea
+            v-model="form.notes"
+            label="Notes (optionnel)"
+            rows="2"
+          />
         </VCardText>
         <VCardActions class="pa-4">
           <VSpacer />
           <VBtn variant="outlined" @click="dialog = false">Annuler</VBtn>
           <VBtn color="primary" :loading="saving" @click="save">
             {{ selectedAccount ? 'Modifier' : 'Créer' }}
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
+
+    <!-- Delete Confirm Dialog -->
+    <VDialog v-model="deleteDialog" max-width="420">
+      <VCard>
+        <VCardTitle class="pa-4 d-flex align-center gap-2">
+          <VIcon icon="tabler-alert-triangle" color="error" />
+          Supprimer le compte
+        </VCardTitle>
+        <VCardText>
+          <p class="mb-2">
+            Voulez-vous supprimer le compte <strong>{{ selectedAccount?.email }}</strong> ?
+          </p>
+          <VAlert type="error" variant="tonal" density="compact">
+            Cette action supprimera aussi tous les <strong>{{ selectedAccount?.profiles?.length || 0 }} profil(s)</strong> associés. Elle est irréversible.
+          </VAlert>
+        </VCardText>
+        <VCardActions class="pa-4">
+          <VSpacer />
+          <VBtn variant="outlined" @click="deleteDialog = false">Annuler</VBtn>
+          <VBtn color="error" :loading="deleting" @click="confirmDelete">
+            <VIcon start icon="tabler-trash" />
+            Supprimer
           </VBtn>
         </VCardActions>
       </VCard>
