@@ -1,6 +1,5 @@
 <script setup>
 import { VForm } from 'vuetify/components/VForm'
-import AuthProvider from '@/views/pages/authentication/AuthProvider.vue'
 import { VNodeRenderer } from '@layouts/components/VNodeRenderer'
 import { themeConfig } from '@themeConfig'
 import authV2RegisterIllustrationBorderedDark from '@images/pages/auth-v2-register-illustration-bordered-dark.png'
@@ -20,18 +19,60 @@ definePage({
   },
 })
 
+const route = useRoute()
+const router = useRouter()
+const ability = useAbility()
+const refVForm = ref()
+const isPasswordVisible = ref(false)
+const submitting = ref(false)
+const serverErrors = ref({})
+
 const form = ref({
-  username: '',
+  name: '',
   email: '',
+  phone: '',
   password: '',
-  privacyPolicies: false,
+  password_confirmation: '',
 })
 
-const isPasswordVisible = ref(false)
+const register = async () => {
+  submitting.value = true
+  serverErrors.value = {}
+  try {
+    const res = await $api('/auth/register', {
+      method: 'POST',
+      body: form.value,
+      onResponseError({ response }) {
+        serverErrors.value = response._data.errors || {}
+      },
+    })
+
+    const { accessToken, userData, userAbilityRules } = res
+
+    useCookie('userAbilityRules').value = userAbilityRules
+    ability.update(userAbilityRules)
+    useCookie('userData').value = userData
+    useCookie('accessToken').value = accessToken
+
+    await nextTick(() => {
+      router.replace(route.query.to ? String(route.query.to) : '/')
+    })
+  } catch (err) {
+    console.error(err)
+  } finally {
+    submitting.value = false
+  }
+}
+
+const onSubmit = () => {
+  refVForm.value?.validate().then(({ valid }) => {
+    if (valid) register()
+  })
+}
 </script>
 
 <template>
-  <RouterLink to="/">
+  <RouterLink to="/flixger/catalog">
     <div class="auth-logo d-flex align-center gap-x-3">
       <VNodeRenderer :nodes="themeConfig.app.logo" />
       <h1 class="auth-title">
@@ -83,106 +124,90 @@ const isPasswordVisible = ref(false)
       >
         <VCardText>
           <h4 class="text-h4 mb-1">
-            Adventure starts here 🚀
+            Créez votre compte FlixGer 🎬
           </h4>
-          <p class="mb-0">
-            Make your app management easy and fun!
+          <p class="mb-0 text-medium-emphasis">
+            Accédez à vos plateformes préférées au meilleur prix
           </p>
         </VCardText>
 
         <VCardText>
-          <VForm @submit.prevent="() => {}">
+          <VForm ref="refVForm" @submit.prevent="onSubmit">
             <VRow>
-              <!-- Username -->
               <VCol cols="12">
                 <AppTextField
-                  v-model="form.username"
+                  v-model="form.name"
                   :rules="[requiredValidator]"
+                  :error-messages="serverErrors.name"
                   autofocus
-                  label="Username"
-                  placeholder="Johndoe"
+                  label="Nom complet"
+                  placeholder="Kofi Amega"
                 />
               </VCol>
 
-              <!-- email -->
               <VCol cols="12">
                 <AppTextField
                   v-model="form.email"
                   :rules="[requiredValidator, emailValidator]"
-                  label="Email"
+                  :error-messages="serverErrors.email"
+                  label="Adresse email"
                   type="email"
-                  placeholder="johndoe@email.com"
+                  placeholder="kofi@example.com"
                 />
               </VCol>
 
-              <!-- password -->
+              <VCol cols="12">
+                <AppTextField
+                  v-model="form.phone"
+                  :rules="[requiredValidator]"
+                  :error-messages="serverErrors.phone"
+                  label="Numéro T-Money / Flooz"
+                  placeholder="9X XX XX XX"
+                />
+              </VCol>
+
               <VCol cols="12">
                 <AppTextField
                   v-model="form.password"
                   :rules="[requiredValidator]"
-                  label="Password"
+                  :error-messages="serverErrors.password"
+                  label="Mot de passe"
                   placeholder="············"
                   :type="isPasswordVisible ? 'text' : 'password'"
-                  autocomplete="password"
+                  autocomplete="new-password"
                   :append-inner-icon="isPasswordVisible ? 'tabler-eye-off' : 'tabler-eye'"
                   @click:append-inner="isPasswordVisible = !isPasswordVisible"
                 />
+              </VCol>
 
-                <div class="d-flex align-center my-6">
-                  <VCheckbox
-                    id="privacy-policy"
-                    v-model="form.privacyPolicies"
-                    inline
-                  />
-                  <VLabel
-                    for="privacy-policy"
-                    style="opacity: 1;"
-                  >
-                    <span class="me-1 text-high-emphasis">I agree to</span>
-                    <a
-                      href="javascript:void(0)"
-                      class="text-primary"
-                    >privacy policy & terms</a>
-                  </VLabel>
-                </div>
+              <VCol cols="12">
+                <AppTextField
+                  v-model="form.password_confirmation"
+                  :rules="[requiredValidator]"
+                  label="Confirmer le mot de passe"
+                  placeholder="············"
+                  type="password"
+                  autocomplete="new-password"
+                />
 
                 <VBtn
                   block
                   type="submit"
+                  :loading="submitting"
+                  class="mt-6"
                 >
-                  Sign up
+                  Créer mon compte
                 </VBtn>
               </VCol>
 
-              <!-- create account -->
-              <VCol
-                cols="12"
-                class="text-center text-base"
-              >
-                <span class="d-inline-block">Already have an account?</span>
+              <VCol cols="12" class="text-center text-base">
+                <span class="d-inline-block">Déjà un compte ?</span>
                 <RouterLink
                   class="text-primary ms-1 d-inline-block"
                   :to="{ name: 'login' }"
                 >
-                  Sign in instead
+                  Se connecter
                 </RouterLink>
-              </VCol>
-
-              <VCol
-                cols="12"
-                class="d-flex align-center"
-              >
-                <VDivider />
-                <span class="mx-4">or</span>
-                <VDivider />
-              </VCol>
-
-              <!-- auth providers -->
-              <VCol
-                cols="12"
-                class="text-center"
-              >
-                <AuthProvider />
               </VCol>
             </VRow>
           </VForm>

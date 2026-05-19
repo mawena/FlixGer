@@ -35,8 +35,8 @@ const errors = ref({
 const refVForm = ref()
 
 const credentials = ref({
-  email: 'admin@demo.com',
-  password: 'admin',
+  email: 'admin@flixger.tg',
+  password: 'password',
 })
 
 const rememberMe = ref(false)
@@ -144,10 +144,10 @@ const onSubmit = () => {
             variant="tonal"
           >
             <p class="text-sm mb-2">
-              Admin Email: <strong>admin@demo.com</strong> / Pass: <strong>admin</strong>
+              Admin: <strong>admin@flixger.tg</strong> / Pass: <strong>password</strong>
             </p>
             <p class="text-sm mb-0">
-              Client Email: <strong>client@demo.com</strong> / Pass: <strong>client</strong>
+              Client: <strong>client@flixger.tg</strong> / Pass: <strong>password</strong>
             </p>
           </VAlert>
         </VCardText>

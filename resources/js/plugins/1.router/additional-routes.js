@@ -12,9 +12,9 @@ export const redirects = [
       const userData = useCookie('userData')
       const userRole = userData.value?.role
       if (userRole === 'admin')
-        return { name: 'dashboards-crm' }
+        return { name: 'flixger-admin-dashboard' }
       if (userRole === 'client')
-        return { name: 'access-control' }
+        return { name: 'flixger-client-dashboard' }
       
       return { name: 'login', query: to.query }
     },
