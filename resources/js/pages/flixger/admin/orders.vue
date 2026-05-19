@@ -31,7 +31,7 @@ const headers = [
 const fetchOrders = async () => {
   loading.value = true
   const params = filterStatus.value ? `?status=${filterStatus.value}` : ''
-  const { data } = await useApi(`/api/admin/orders${params}`)
+  const { data } = await useApi(`/admin/orders${params}`)
   orders.value = data.value?.data || data.value || []
   loading.value = false
 }
@@ -40,7 +40,7 @@ onMounted(fetchOrders)
 watch(filterStatus, fetchOrders)
 
 const openDetail = async (order) => {
-  const { data } = await useApi(`/api/admin/orders/${order.id}`)
+  const { data } = await useApi(`/admin/orders/${order.id}`)
   selectedOrder.value = data.value
   detailDialog.value = true
 }
@@ -48,7 +48,7 @@ const openDetail = async (order) => {
 const approveOrder = async (order) => {
   approving.value = true
   try {
-    const { data, error } = await useApi(`/api/admin/orders/${order.id}/approve`, { method: 'POST' })
+    const { data, error } = await useApi(`/admin/orders/${order.id}/approve`, { method: 'POST' })
     if (error.value) {
       alert(error.value?.data?.message || 'Aucun profil disponible')
       return
@@ -69,7 +69,7 @@ const openReject = (order) => {
 const confirmReject = async () => {
   rejecting.value = true
   try {
-    await useApi(`/api/admin/orders/${selectedOrder.value.id}/reject`, {
+    await useApi(`/admin/orders/${selectedOrder.value.id}/reject`, {
       method: 'POST',
       body: JSON.stringify({ reject_reason: rejectReason.value }),
     })
@@ -82,7 +82,7 @@ const confirmReject = async () => {
 }
 
 const markVerified = async (order) => {
-  await useApi(`/api/admin/orders/${order.id}/verify`, { method: 'POST' })
+  await useApi(`/admin/orders/${order.id}/verify`, { method: 'POST' })
   if (selectedOrder.value?.id === order.id) {
     selectedOrder.value.payment_verified = true
   }

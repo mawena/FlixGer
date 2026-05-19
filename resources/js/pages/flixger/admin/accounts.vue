@@ -67,7 +67,7 @@ const save = async () => {
   saving.value = true
   try {
     if (selectedAccount.value) {
-      await useApi(`/api/admin/accounts/${selectedAccount.value.id}`, {
+      await useApi(`/admin/accounts/${selectedAccount.value.id}`, {
         method: 'PUT',
         body: JSON.stringify(form.value),
       })
@@ -86,7 +86,7 @@ const save = async () => {
 
 const deleteAccount = async (acc) => {
   if (confirm(`Supprimer le compte ${acc.email} ?`)) {
-    await useApi(`/api/admin/accounts/${acc.id}`, { method: 'DELETE' })
+    await useApi(`/admin/accounts/${acc.id}`, { method: 'DELETE' })
     await fetchData()
   }
 }

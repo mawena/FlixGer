@@ -111,6 +111,16 @@ export default defineConfig({
       '@api-utils': fileURLToPath(new URL('./resources/js/plugins/fake-api/utils/', import.meta.url)),
     },
   },
+  server: {
+    host: '0.0.0.0',
+    cors: true,
+    origin: 'http://flixger.mawena.com:5173',
+    hmr: {
+      host: 'flixger.mawena.com',
+      port: 5173,
+      protocol: 'ws',
+    },
+  },
   build: {
     chunkSizeWarningLimit: 5000,
   },

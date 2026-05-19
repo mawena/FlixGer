@@ -54,7 +54,7 @@ const save = async () => {
   saving.value = true
   try {
     if (selectedPlatform.value) {
-      await useApi(`/api/admin/platforms/${selectedPlatform.value.id}`, {
+      await useApi(`/admin/platforms/${selectedPlatform.value.id}`, {
         method: 'PUT',
         body: JSON.stringify(form.value),
       })
@@ -77,7 +77,7 @@ const confirmDelete = (p) => {
 }
 
 const deletePlatform = async () => {
-  await useApi(`/api/admin/platforms/${selectedPlatform.value.id}`, { method: 'DELETE' })
+  await useApi(`/admin/platforms/${selectedPlatform.value.id}`, { method: 'DELETE' })
   deleteDialog.value = false
   await fetchPlatforms()
 }

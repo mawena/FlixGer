@@ -13,7 +13,7 @@ const loading = ref(true)
 
 const fetchOrder = async () => {
   try {
-    const { data } = await useApi(`/api/client/orders/${route.params.id}`)
+    const { data } = await useApi(`/client/orders/${route.params.id}`)
     order.value = data.value
   } finally {
     loading.value = false

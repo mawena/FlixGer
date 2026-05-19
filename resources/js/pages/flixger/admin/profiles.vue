@@ -38,7 +38,7 @@ const fetchData = async () => {
   if (filterPlatform.value) params.append('platform_id', filterPlatform.value)
 
   const [profRes, platRes] = await Promise.all([
-    useApi(`/api/admin/profiles?${params}`),
+    useApi(`/admin/profiles?${params}`),
     useApi('/admin/platforms'),
   ])
   profiles.value = profRes.data.value || []
@@ -58,7 +58,7 @@ const openEdit = (p) => {
 const save = async () => {
   saving.value = true
   try {
-    await useApi(`/api/admin/profiles/${selectedProfile.value.id}`, {
+    await useApi(`/admin/profiles/${selectedProfile.value.id}`, {
       method: 'PUT',
       body: JSON.stringify(form.value),
     })
@@ -71,7 +71,7 @@ const save = async () => {
 
 const deleteProfile = async (p) => {
   if (confirm(`Supprimer le profil "${p.profile_name}" ?`)) {
-    await useApi(`/api/admin/profiles/${p.id}`, { method: 'DELETE' })
+    await useApi(`/admin/profiles/${p.id}`, { method: 'DELETE' })
     await fetchData()
   }
 }
