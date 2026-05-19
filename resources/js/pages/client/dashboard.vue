@@ -1,10 +1,11 @@
 <script setup>
+import { useExpiration } from '@/composables/useExpiration'
+
 definePage({
-  meta: {
-    action: 'read',
-    subject: 'Client',
-  },
+  meta: { action: 'read', subject: 'Client' },
 })
+
+const { daysLeft, isExpired, expiryColor, expiryLabel, progressValue } = useExpiration()
 
 const userData = useCookie('userData')
 const orders = ref([])
@@ -21,25 +22,12 @@ const fetchOrders = async () => {
 
 onMounted(fetchOrders)
 
-const activeOrders = computed(() => orders.value.filter(o => o.status === 'approved'))
+// Séparer actif, expiré, en attente
+const liveOrders    = computed(() => orders.value.filter(o => o.status === 'approved' && !isExpired(o.end_date)))
+const expiredOrders = computed(() => orders.value.filter(o => o.status === 'approved' && isExpired(o.end_date)))
 const pendingOrders = computed(() => orders.value.filter(o => o.status === 'pending'))
 
-const daysLeft = (endDate) => {
-  if (!endDate) return null
-  return Math.max(0, Math.ceil((new Date(endDate) - new Date()) / 86400000))
-}
-
-const daysLeftColor = (d) => {
-  if (d === null) return 'default'
-  if (d <= 3) return 'error'
-  if (d <= 7) return 'warning'
-  return 'success'
-}
-
-const platformColors = {
-  Netflix: '#E50914', Spotify: '#1DB954',
-  'Disney+': '#113CCF', 'Prime Video': '#00A8E1',
-}
+const platformColors = { Netflix: '#E50914', Spotify: '#1DB954', 'Disney+': '#113CCF', 'Prime Video': '#00A8E1' }
 const getColor = n => platformColors[n] || '#7367F0'
 
 const copied = ref(null)
@@ -55,12 +43,8 @@ const copyText = async (text, key) => {
     <!-- Header -->
     <div class="d-flex justify-space-between align-start flex-wrap gap-3 mb-6">
       <div>
-        <h2 class="text-h5 font-weight-bold">
-          Bonjour, {{ userData?.name?.split(' ')[0] }} 👋
-        </h2>
-        <p class="text-body-2 text-medium-emphasis mb-0">
-          Gérez vos abonnements streaming
-        </p>
+        <h2 class="text-h5 font-weight-bold">Bonjour, {{ userData?.name?.split(' ')[0] }} 👋</h2>
+        <p class="text-body-2 text-medium-emphasis mb-0">Gérez vos abonnements streaming</p>
       </div>
       <RouterLink to="/catalog">
         <VBtn color="primary">
@@ -76,7 +60,7 @@ const copyText = async (text, key) => {
         <VCard>
           <VCardText class="text-center pa-4">
             <VIcon icon="tabler-circle-check" color="success" size="28" class="mb-1" />
-            <div class="text-h5 font-weight-black">{{ activeOrders.length }}</div>
+            <div class="text-h5 font-weight-black">{{ liveOrders.length }}</div>
             <div class="text-caption text-medium-emphasis">Actifs</div>
           </VCardText>
         </VCard>
@@ -90,35 +74,36 @@ const copyText = async (text, key) => {
           </VCardText>
         </VCard>
       </VCol>
+      <VCol v-if="expiredOrders.length > 0" cols="6" sm="3">
+        <VCard>
+          <VCardText class="text-center pa-4">
+            <VIcon icon="tabler-clock-x" color="error" size="28" class="mb-1" />
+            <div class="text-h5 font-weight-black text-error">{{ expiredOrders.length }}</div>
+            <div class="text-caption text-medium-emphasis">Expiré(s)</div>
+          </VCardText>
+        </VCard>
+      </VCol>
     </VRow>
 
     <VProgressCircular v-if="loading" indeterminate color="primary" class="d-block mx-auto my-8" />
 
     <template v-else>
 
-      <!-- ── Active subscriptions ── -->
-      <template v-if="activeOrders.length > 0">
+      <!-- ── Abonnements actifs ── -->
+      <template v-if="liveOrders.length > 0">
         <h3 class="text-subtitle-1 font-weight-bold mb-3">
           <VIcon icon="tabler-device-tv" class="me-1" size="18" />
           Abonnements actifs
         </h3>
 
-        <VCard
-          v-for="order in activeOrders"
-          :key="order.id"
-          class="sub-card mb-4"
-        >
-          <!-- Color top stripe -->
+        <VCard v-for="order in liveOrders" :key="order.id" class="sub-card mb-4">
           <div class="sub-stripe" :style="{ background: getColor(order.platform?.name) }" />
 
           <VCardText class="pa-4">
             <!-- Title row -->
             <div class="d-flex justify-space-between align-start mb-3">
               <div class="d-flex align-center gap-2">
-                <div
-                  class="sub-icon"
-                  :style="{ background: getColor(order.platform?.name) + '18' }"
-                >
+                <div class="sub-icon" :style="{ background: getColor(order.platform?.name) + '18' }">
                   <VIcon icon="tabler-device-tv" :color="getColor(order.platform?.name)" size="20" />
                 </div>
                 <div>
@@ -126,28 +111,21 @@ const copyText = async (text, key) => {
                   <div class="text-caption text-medium-emphasis">{{ order.duration_months }} mois</div>
                 </div>
               </div>
-              <VChip
-                v-if="daysLeft(order.end_date) !== null"
-                :color="daysLeftColor(daysLeft(order.end_date))"
-                size="small"
-                label
-              >
-                {{ daysLeft(order.end_date) }}j restants
+              <VChip :color="expiryColor(order.end_date)" size="small" label>
+                {{ expiryLabel(order.end_date) }}
               </VChip>
             </div>
 
-            <!-- Expiry progress bar -->
+            <!-- Progress bar -->
             <div v-if="order.start_date && order.end_date" class="mb-4">
               <div class="d-flex justify-space-between text-caption text-medium-emphasis mb-1">
                 <span>{{ order.start_date }}</span>
                 <span>Expire le {{ order.end_date }}</span>
               </div>
               <VProgressLinear
-                :model-value="Math.min(100, Math.max(0, 100 - (daysLeft(order.end_date) / (order.duration_months * 30)) * 100))"
-                :color="daysLeftColor(daysLeft(order.end_date))"
-                rounded
-                height="6"
-                bg-color="surface-variant"
+                :model-value="progressValue(order.start_date, order.end_date)"
+                :color="expiryColor(order.end_date)"
+                rounded height="6" bg-color="surface-variant"
               />
             </div>
 
@@ -158,18 +136,13 @@ const copyText = async (text, key) => {
                 <VIcon icon="tabler-lock-open" color="success" size="16" class="me-1" />
                 <span class="text-caption font-weight-bold text-success">Vos identifiants d'accès</span>
               </div>
-
               <VRow dense>
                 <VCol cols="12" sm="6">
                   <div class="cred-field" @click="copyText(order.access.email, `email-${order.id}`)">
                     <div class="cred-label">Email du compte</div>
                     <div class="cred-value-row">
                       <span class="cred-value">{{ order.access.email }}</span>
-                      <VIcon
-                        :icon="copied === `email-${order.id}` ? 'tabler-check' : 'tabler-copy'"
-                        :color="copied === `email-${order.id}` ? 'success' : 'default'"
-                        size="14"
-                      />
+                      <VIcon :icon="copied === `email-${order.id}` ? 'tabler-check' : 'tabler-copy'" :color="copied === `email-${order.id}` ? 'success' : 'default'" size="14" />
                     </div>
                   </div>
                 </VCol>
@@ -178,11 +151,7 @@ const copyText = async (text, key) => {
                     <div class="cred-label">Mot de passe</div>
                     <div class="cred-value-row">
                       <span class="cred-value">{{ order.access.password }}</span>
-                      <VIcon
-                        :icon="copied === `pw-${order.id}` ? 'tabler-check' : 'tabler-copy'"
-                        :color="copied === `pw-${order.id}` ? 'success' : 'default'"
-                        size="14"
-                      />
+                      <VIcon :icon="copied === `pw-${order.id}` ? 'tabler-check' : 'tabler-copy'" :color="copied === `pw-${order.id}` ? 'success' : 'default'" size="14" />
                     </div>
                   </div>
                 </VCol>
@@ -191,11 +160,7 @@ const copyText = async (text, key) => {
                     <div class="cred-label">Profil à utiliser</div>
                     <div class="cred-value-row">
                       <span class="cred-value">{{ order.access.profile_name }}</span>
-                      <VIcon
-                        :icon="copied === `prof-${order.id}` ? 'tabler-check' : 'tabler-copy'"
-                        :color="copied === `prof-${order.id}` ? 'success' : 'default'"
-                        size="14"
-                      />
+                      <VIcon :icon="copied === `prof-${order.id}` ? 'tabler-check' : 'tabler-copy'" :color="copied === `prof-${order.id}` ? 'success' : 'default'" size="14" />
                     </div>
                   </div>
                 </VCol>
@@ -204,24 +169,19 @@ const copyText = async (text, key) => {
                     <div class="cred-label">Code PIN</div>
                     <div class="cred-value-row">
                       <span class="cred-value">{{ order.access.pin_code }}</span>
-                      <VIcon
-                        :icon="copied === `pin-${order.id}` ? 'tabler-check' : 'tabler-copy'"
-                        :color="copied === `pin-${order.id}` ? 'success' : 'default'"
-                        size="14"
-                      />
+                      <VIcon :icon="copied === `pin-${order.id}` ? 'tabler-check' : 'tabler-copy'" :color="copied === `pin-${order.id}` ? 'success' : 'default'" size="14" />
                     </div>
                   </div>
                 </VCol>
               </VRow>
 
+              <!-- Alert renouvellement -->
               <VAlert
                 v-if="daysLeft(order.end_date) !== null && daysLeft(order.end_date) <= 7"
                 :type="daysLeft(order.end_date) <= 3 ? 'error' : 'warning'"
-                variant="tonal"
-                density="compact"
-                class="mt-3"
+                variant="tonal" density="compact" class="mt-3"
               >
-                Votre abonnement expire dans <strong>{{ daysLeft(order.end_date) }} jour(s)</strong>.
+                <strong>{{ expiryLabel(order.end_date) }}</strong> pour cet abonnement.
                 <RouterLink to="/catalog" class="ms-1 font-weight-bold">Renouveler →</RouterLink>
               </VAlert>
             </div>
@@ -229,13 +189,42 @@ const copyText = async (text, key) => {
         </VCard>
       </template>
 
-      <!-- ── Empty state ── -->
-      <VCard v-else class="text-center pa-8 mb-4">
+      <!-- ── Abonnements expirés ── -->
+      <template v-if="expiredOrders.length > 0">
+        <h3 class="text-subtitle-1 font-weight-bold mb-3 mt-4">
+          <VIcon icon="tabler-clock-x" color="error" class="me-1" size="18" />
+          Abonnements expirés
+        </h3>
+
+        <VCard v-for="order in expiredOrders" :key="order.id" class="sub-card mb-3" variant="outlined">
+          <div class="sub-stripe" style="background: rgb(var(--v-theme-error))" />
+          <VCardText class="pa-4">
+            <div class="d-flex justify-space-between align-center flex-wrap gap-2">
+              <div class="d-flex align-center gap-2">
+                <div class="sub-icon" style="background: rgba(var(--v-theme-error), 0.1)">
+                  <VIcon icon="tabler-device-tv-off" color="error" size="20" />
+                </div>
+                <div>
+                  <div class="font-weight-medium text-medium-emphasis">{{ order.platform?.name }}</div>
+                  <div class="text-caption text-medium-emphasis">Expiré le {{ order.end_date }}</div>
+                </div>
+              </div>
+              <div class="d-flex align-center gap-2">
+                <VChip color="error" size="small" label>Expiré</VChip>
+                <RouterLink to="/catalog">
+                  <VBtn color="primary" size="small">Renouveler</VBtn>
+                </RouterLink>
+              </div>
+            </div>
+          </VCardText>
+        </VCard>
+      </template>
+
+      <!-- ── Empty ── -->
+      <VCard v-if="liveOrders.length === 0 && expiredOrders.length === 0" class="text-center pa-8 mb-4">
         <VIcon icon="tabler-device-tv-off" size="56" color="secondary" class="mb-3" />
         <p class="text-body-1 font-weight-medium mb-1">Aucun abonnement actif</p>
-        <p class="text-body-2 text-medium-emphasis mb-4">
-          Choisissez une plateforme et passez votre première commande
-        </p>
+        <p class="text-body-2 text-medium-emphasis mb-4">Choisissez une plateforme et passez votre première commande</p>
         <RouterLink to="/catalog">
           <VBtn color="primary">
             <VIcon start icon="tabler-apps" />
@@ -244,27 +233,18 @@ const copyText = async (text, key) => {
         </RouterLink>
       </VCard>
 
-      <!-- ── Pending orders ── -->
+      <!-- ── Pending ── -->
       <template v-if="pendingOrders.length > 0">
-        <h3 class="text-subtitle-1 font-weight-bold mb-3">
+        <h3 class="text-subtitle-1 font-weight-bold mb-3 mt-4">
           <VIcon icon="tabler-clock" color="warning" class="me-1" size="18" />
           En attente de validation
         </h3>
-
-        <VCard
-          v-for="order in pendingOrders"
-          :key="order.id"
-          variant="tonal"
-          color="warning"
-          class="mb-3"
-        >
+        <VCard v-for="order in pendingOrders" :key="order.id" variant="tonal" color="warning" class="mb-3">
           <VCardText class="pa-4">
             <div class="d-flex justify-space-between align-center flex-wrap gap-2">
               <div>
                 <div class="font-weight-bold">{{ order.platform?.name }}</div>
-                <div class="text-caption">
-                  {{ order.duration_months }} mois · {{ order.total_amount?.toLocaleString() }} XOF
-                </div>
+                <div class="text-caption">{{ order.duration_months }} mois · {{ order.total_amount?.toLocaleString() }} XOF</div>
                 <div class="text-caption text-medium-emphasis">Réf: {{ order.transaction_reference }}</div>
               </div>
               <RouterLink :to="{ name: 'client-orders-id', params: { id: order.id } }">
@@ -282,42 +262,15 @@ const copyText = async (text, key) => {
 <style scoped>
 .sub-card { border-radius: 12px !important; overflow: hidden; }
 .sub-stripe { height: 4px; }
-.sub-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
+.sub-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
 .cred-header { display: flex; align-items: center; }
-
 .cred-field {
   background: rgba(var(--v-theme-success), 0.06);
   border: 1px solid rgba(var(--v-theme-success), 0.15);
-  border-radius: 8px;
-  padding: 8px 10px;
-  margin-bottom: 6px;
-  cursor: pointer;
-  transition: background 0.15s;
+  border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; cursor: pointer; transition: background 0.15s;
 }
 .cred-field:hover { background: rgba(var(--v-theme-success), 0.1); }
-
-.cred-label {
-  font-size: 0.7rem;
-  color: rgba(var(--v-theme-on-surface), 0.5);
-  margin-bottom: 2px;
-}
-.cred-value-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.cred-value {
-  font-weight: 600;
-  font-size: 0.88rem;
-  word-break: break-all;
-}
+.cred-label { font-size: 0.7rem; color: rgba(var(--v-theme-on-surface), 0.5); margin-bottom: 2px; }
+.cred-value-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.cred-value { font-weight: 600; font-size: 0.88rem; word-break: break-all; }
 </style>

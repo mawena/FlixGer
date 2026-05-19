@@ -4,12 +4,8 @@ import { themeConfig } from '@themeConfig'
 
 // Components
 import Footer from '@/layouts/components/Footer.vue'
-import NavBarNotifications from '@/layouts/components/NavBarNotifications.vue'
-import NavSearchBar from '@/layouts/components/NavSearchBar.vue'
-import NavbarShortcuts from '@/layouts/components/NavbarShortcuts.vue'
 import NavbarThemeSwitcher from '@/layouts/components/NavbarThemeSwitcher.vue'
 import UserProfile from '@/layouts/components/UserProfile.vue'
-import NavBarI18n from '@core/components/I18n.vue'
 import { HorizontalNavLayout } from '@layouts'
 import { VNodeRenderer } from '@layouts/components/VNodeRenderer'
 </script>
@@ -30,16 +26,16 @@ import { VNodeRenderer } from '@layouts/components/VNodeRenderer'
       </RouterLink>
       <VSpacer />
 
-      <NavSearchBar trigger-btn-class="ms-lg-n3" />
+      <!-- <NavSearchBar trigger-btn-class="ms-lg-n3" /> -->
 
-      <NavBarI18n
+      <!-- <NavBarI18n
         v-if="themeConfig.app.i18n.enable && themeConfig.app.i18n.langConfig?.length"
         :languages="themeConfig.app.i18n.langConfig"
-      />
+      /> -->
 
       <NavbarThemeSwitcher />
-      <NavbarShortcuts />
-      <NavBarNotifications class="me-2" />
+      <!-- <NavbarShortcuts /> -->
+      <!-- <NavBarNotifications class="me-2" /> -->
       <UserProfile />
     </template>
 
@@ -52,6 +48,6 @@ import { VNodeRenderer } from '@layouts/components/VNodeRenderer'
     </template>
 
     <!-- 👉 Customizer -->
-    <TheCustomizer />
+    <!-- <TheCustomizer /> -->
   </HorizontalNavLayout>
 </template>

@@ -8,6 +8,7 @@ definePage({
 
 const stats = ref(null)
 const expiringSoon = ref([])
+const recentlyExpired = ref([])
 const recentOrders = ref([])
 const loading = ref(true)
 
@@ -17,6 +18,7 @@ const fetchDashboard = async () => {
     if (data.value) {
       stats.value = data.value.stats
       expiringSoon.value = data.value.expiringSoon
+      recentlyExpired.value = data.value.recentlyExpired || []
       recentOrders.value = data.value.recentOrders
     }
   } finally {
@@ -75,7 +77,7 @@ const statusLabel = (status) => {
             <VCardText class="text-center">
               <VIcon icon="tabler-circle-check" color="success" size="32" class="mb-2" />
               <div class="text-h5 font-weight-bold text-success">{{ stats?.approved_orders }}</div>
-              <div class="text-caption text-medium-emphasis">Validées</div>
+              <div class="text-caption text-medium-emphasis">Actifs</div>
             </VCardText>
           </VCard>
         </VCol>
@@ -97,6 +99,15 @@ const statusLabel = (status) => {
             </VCardText>
           </VCard>
         </VCol>
+        <VCol v-if="stats?.expired_orders > 0" cols="6" sm="4" md="2">
+          <VCard>
+            <VCardText class="text-center">
+              <VIcon icon="tabler-clock-x" color="error" size="32" class="mb-2" />
+              <div class="text-h5 font-weight-bold text-error">{{ stats?.expired_orders }}</div>
+              <div class="text-caption text-medium-emphasis">Expirés</div>
+            </VCardText>
+          </VCard>
+        </VCol>
         <VCol cols="6" sm="4" md="2">
           <VCard>
             <VCardText class="text-center">
@@ -109,31 +120,52 @@ const statusLabel = (status) => {
       </VRow>
 
       <VRow>
-        <!-- Expiring soon -->
+        <!-- Expiring soon + recently expired -->
         <VCol cols="12" md="5">
-          <VCard>
+          <VCard class="mb-3">
             <VCardTitle class="pa-4 pb-0">
               <VIcon icon="tabler-alert-triangle" color="warning" class="me-2" />
               Expiration dans 48h
-              <VChip v-if="expiringSoon.length" color="error" size="x-small" class="ms-2">{{ expiringSoon.length }}</VChip>
+              <VChip v-if="expiringSoon.length" color="warning" size="x-small" class="ms-2">{{ expiringSoon.length }}</VChip>
             </VCardTitle>
             <VCardText>
-              <div v-if="expiringSoon.length === 0" class="text-center py-4">
-                <VIcon icon="tabler-circle-check" color="success" size="36" class="mb-2" />
-                <p class="text-body-2 text-medium-emphasis">Aucune expiration imminente</p>
+              <div v-if="expiringSoon.length === 0" class="text-center py-3">
+                <VIcon icon="tabler-circle-check" color="success" size="32" class="mb-1" />
+                <p class="text-body-2 text-medium-emphasis mb-0">Aucune expiration imminente</p>
               </div>
               <VList v-else density="compact">
-                <VListItem
-                  v-for="item in expiringSoon"
-                  :key="item.id"
-                >
+                <VListItem v-for="item in expiringSoon" :key="item.id">
                   <template #prepend>
-                    <VAvatar :color="item.hours_left <= 24 ? 'error' : 'warning'" size="36" variant="tonal">
-                      {{ item.hours_left }}h
+                    <VAvatar :color="item.hours_left <= 24 ? 'error' : 'warning'" size="34" variant="tonal">
+                      <span style="font-size:0.65rem;font-weight:700">{{ item.hours_left }}h</span>
                     </VAvatar>
                   </template>
-                  <VListItemTitle>{{ item.client }} – {{ item.platform }}</VListItemTitle>
-                  <VListItemSubtitle>Profil: {{ item.profile }} | Expire: {{ item.end_date }}</VListItemSubtitle>
+                  <VListItemTitle class="text-body-2">{{ item.client }} – {{ item.platform }}</VListItemTitle>
+                  <VListItemSubtitle>Profil : {{ item.profile || '–' }} | {{ item.end_date }}</VListItemSubtitle>
+                </VListItem>
+              </VList>
+            </VCardText>
+          </VCard>
+
+          <VCard>
+            <VCardTitle class="pa-4 pb-0">
+              <VIcon icon="tabler-clock-x" color="error" class="me-2" />
+              Expirés récemment
+              <VChip v-if="recentlyExpired.length" color="error" size="x-small" class="ms-2">{{ recentlyExpired.length }}</VChip>
+            </VCardTitle>
+            <VCardText>
+              <div v-if="recentlyExpired.length === 0" class="text-center py-3">
+                <p class="text-body-2 text-medium-emphasis mb-0">Aucune expiration récente</p>
+              </div>
+              <VList v-else density="compact">
+                <VListItem v-for="item in recentlyExpired" :key="item.id">
+                  <template #prepend>
+                    <VAvatar color="error" size="34" variant="tonal">
+                      <VIcon icon="tabler-clock-x" size="16" />
+                    </VAvatar>
+                  </template>
+                  <VListItemTitle class="text-body-2">{{ item.client }} – {{ item.platform }}</VListItemTitle>
+                  <VListItemSubtitle>Expiré le {{ item.end_date }}</VListItemSubtitle>
                 </VListItem>
               </VList>
             </VCardText>

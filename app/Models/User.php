@@ -35,7 +35,10 @@ class User extends AuthenticatableBase
     {
         return match ($this->role) {
             'admin' => [['subject' => ['all'], 'action' => ['manage']]],
-            default => [['subject' => ['Client'], 'action' => ['read', 'create']]],
+            default => [
+                ['subject' => ['Client'], 'action' => ['read', 'create']],
+                ['subject' => ['Auth'],   'action' => ['read']],
+            ],
         };
     }
 

@@ -20,11 +20,13 @@ declare module 'vue-router/auto-routes' {
   export interface RouteNamedMap {
     '$error': RouteRecordInfo<'$error', '/:error(.*)', { error: ParamValue<true> }, { error: ParamValue<false> }>,
     'access-control': RouteRecordInfo<'access-control', '/access-control', Record<never, never>, Record<never, never>>,
+    'account-security': RouteRecordInfo<'account-security', '/account/security', Record<never, never>, Record<never, never>>,
     'admin-accounts': RouteRecordInfo<'admin-accounts', '/admin/accounts', Record<never, never>, Record<never, never>>,
     'admin-dashboard': RouteRecordInfo<'admin-dashboard', '/admin/dashboard', Record<never, never>, Record<never, never>>,
     'admin-orders': RouteRecordInfo<'admin-orders', '/admin/orders', Record<never, never>, Record<never, never>>,
     'admin-platforms': RouteRecordInfo<'admin-platforms', '/admin/platforms', Record<never, never>, Record<never, never>>,
     'admin-profiles': RouteRecordInfo<'admin-profiles', '/admin/profiles', Record<never, never>, Record<never, never>>,
+    'admin-users': RouteRecordInfo<'admin-users', '/admin/users', Record<never, never>, Record<never, never>>,
     'apps-academy-course-details': RouteRecordInfo<'apps-academy-course-details', '/apps/academy/course-details', Record<never, never>, Record<never, never>>,
     'apps-academy-dashboard': RouteRecordInfo<'apps-academy-dashboard', '/apps/academy/dashboard', Record<never, never>, Record<never, never>>,
     'apps-academy-my-course': RouteRecordInfo<'apps-academy-my-course', '/apps/academy/my-course', Record<never, never>, Record<never, never>>,

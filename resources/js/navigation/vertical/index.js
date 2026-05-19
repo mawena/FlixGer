@@ -24,6 +24,11 @@ const adminNav = [
     icon: { icon: 'tabler-shopping-cart' },
     to: 'admin-orders',
   },
+  {
+    title: 'Utilisateurs',
+    icon: { icon: 'tabler-users' },
+    to: 'admin-users',
+  },
 ]
 
 const clientNav = [

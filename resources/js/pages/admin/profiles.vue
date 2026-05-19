@@ -152,11 +152,15 @@ const statusLabel = s => s === 'available' ? 'Disponible' : 'Assigné'
         <template #item.end_date="{ item }">
           <span v-if="item.current_order?.end_date">
             <VChip
-              :color="new Date(item.current_order.end_date) < new Date(Date.now() + 48 * 3600000) ? 'error' : 'default'"
+              :color="new Date(item.current_order.end_date) < new Date()
+                ? 'error'
+                : new Date(item.current_order.end_date) < new Date(Date.now() + 48 * 3600000)
+                  ? 'warning'
+                  : 'success'"
               size="x-small"
               variant="tonal"
             >
-              {{ item.current_order.end_date }}
+              {{ new Date(item.current_order.end_date) < new Date() ? 'Expiré · ' : '' }}{{ item.current_order.end_date }}
             </VChip>
           </span>
           <span v-else class="text-medium-emphasis">–</span>

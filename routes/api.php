@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\PlatformController as AdminPlatformController;
 use App\Http\Controllers\Admin\MasterAccountController;
 use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
+use App\Http\Controllers\Admin\UserController;
 use Illuminate\Support\Facades\Route;
 
 // Public
@@ -19,6 +20,7 @@ Route::get('/platforms', [PlatformController::class, 'index']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me', [AuthController::class, 'me']);
+    Route::post('/auth/change-password', [AuthController::class, 'changePassword']);
 
     // Client routes
     Route::prefix('client')->group(function () {
@@ -34,6 +36,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('platforms', AdminPlatformController::class);
         Route::apiResource('accounts', MasterAccountController::class);
         Route::apiResource('profiles', ProfileController::class)->except(['show']);
+
+        Route::get('/users/stats', [UserController::class, 'stats']);
+        Route::apiResource('users', UserController::class);
 
         Route::get('/orders', [AdminOrderController::class, 'index']);
         Route::get('/orders/{order}', [AdminOrderController::class, 'show']);

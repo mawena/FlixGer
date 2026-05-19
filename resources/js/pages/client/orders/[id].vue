@@ -1,10 +1,11 @@
 <script setup>
+import { useExpiration } from '@/composables/useExpiration'
+
 definePage({
-  meta: {
-    action: 'read',
-    subject: 'Client',
-  },
+  meta: { action: 'read', subject: 'Client' },
 })
+
+const { isExpired, expiryColor, expiryLabel } = useExpiration()
 
 const route = useRoute()
 const router = useRouter()
@@ -22,19 +23,19 @@ const fetchOrder = async () => {
 
 onMounted(fetchOrder)
 
+const orderExpired = computed(() =>
+  order.value?.status === 'approved' && isExpired(order.value?.end_date),
+)
+
 const statusColor = (status) => {
+  if (status === 'approved' && orderExpired.value) return 'error'
   return { pending: 'warning', approved: 'success', rejected: 'error' }[status] || 'default'
 }
 
 const statusLabel = (status) => {
-  return { pending: 'En attente de validation', approved: 'Validée ✓', rejected: 'Rejetée ✗' }[status] || status
+  if (status === 'approved' && orderExpired.value) return 'Abonnement expiré'
+  return { pending: 'En attente de validation', approved: 'Actif ✓', rejected: 'Rejetée ✗' }[status] || status
 }
-
-const daysLeft = computed(() => {
-  if (!order.value?.end_date) return null
-  const diff = Math.ceil((new Date(order.value.end_date) - new Date()) / 86400000)
-  return diff > 0 ? diff : 0
-})
 </script>
 
 <template>
@@ -115,15 +116,21 @@ const daysLeft = computed(() => {
               </VListItem>
             </VList>
 
-            <!-- Expiry countdown -->
+            <!-- Expiry alert -->
             <VAlert
-              v-if="order.status === 'approved' && daysLeft !== null && daysLeft <= 10"
-              :type="daysLeft <= 3 ? 'error' : 'warning'"
+              v-if="order.status === 'approved' && order.end_date"
+              :type="orderExpired ? 'error' : expiryColor(order.end_date) === 'warning' || expiryColor(order.end_date) === 'error' ? expiryColor(order.end_date) : null"
               variant="tonal"
               class="mt-3"
             >
-              <strong>{{ daysLeft }} jour(s)</strong> avant expiration.
-              <RouterLink to="/catalog" class="ms-1">Renouveler maintenant</RouterLink>
+              <template v-if="orderExpired">
+                Cet abonnement a <strong>expiré le {{ order.end_date }}</strong>.
+                <RouterLink to="/catalog" class="ms-1 font-weight-bold">Renouveler →</RouterLink>
+              </template>
+              <template v-else-if="expiryColor(order.end_date) !== 'success'">
+                <strong>{{ expiryLabel(order.end_date) }}</strong> pour cet abonnement.
+                <RouterLink to="/catalog" class="ms-1">Renouveler maintenant</RouterLink>
+              </template>
             </VAlert>
           </VCardText>
         </VCard>
