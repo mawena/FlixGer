@@ -23,15 +23,19 @@ const form = ref({
   status: 'active',
   notes: '',
   nb_profiles: 4,
+  generate_pins: true,
 })
 
 const headers = [
   { title: 'Plateforme', key: 'platform' },
   { title: 'Email', key: 'email' },
+  { title: 'Mot de passe', key: 'password' },
   { title: 'Statut', key: 'status' },
   { title: 'Profils', key: 'profiles_count' },
   { title: 'Actions', key: 'actions', sortable: false },
 ]
+
+const pwVisible = reactive({})
 
 const fetchData = async () => {
   loading.value = true
@@ -49,7 +53,7 @@ onMounted(fetchData)
 const openCreate = () => {
   selectedAccount.value = null
   formErrors.value = {}
-  form.value = { platform_id: null, email: '', password: '', status: 'active', notes: '', nb_profiles: 4 }
+  form.value = { platform_id: null, email: '', password: '', status: 'active', notes: '', nb_profiles: 4, generate_pins: true }
   dialog.value = true
 }
 
@@ -157,6 +161,17 @@ const profileStatusColor = s => s === 'available' ? 'success' : 'warning'
           <span class="font-weight-medium">{{ item.platform?.name }}</span>
         </template>
 
+        <template #item.password="{ item }">
+          <div class="d-flex align-center gap-1">
+            <span class="font-mono text-body-2">
+              {{ pwVisible[item.id] ? item.password : '••••••••' }}
+            </span>
+            <VBtn icon size="x-small" variant="text" @click="pwVisible[item.id] = !pwVisible[item.id]">
+              <VIcon :icon="pwVisible[item.id] ? 'tabler-eye-off' : 'tabler-eye'" size="14" />
+            </VBtn>
+          </div>
+        </template>
+
         <template #item.status="{ item }">
           <VChip :color="statusColor(item.status)" size="small" label>
             {{ item.status === 'active' ? 'Actif' : 'Expiré' }}
@@ -260,6 +275,14 @@ const profileStatusColor = s => s === 'available' ? 'success' : 'warning'
             min="1"
             max="10"
             :error-messages="formErrors.nb_profiles"
+            class="mb-3"
+          />
+          <VSwitch
+            v-if="!selectedAccount"
+            v-model="form.generate_pins"
+            label="Générer les codes PIN automatiquement"
+            color="primary"
+            density="compact"
             class="mb-3"
           />
           <VTextarea

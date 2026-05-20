@@ -24,21 +24,24 @@ class MasterAccountController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'platform_id' => 'required|exists:platforms,id',
-            'email'       => 'required|email',
-            'password'    => 'required|string',
-            'status'      => 'in:active,expired',
-            'notes'       => 'nullable|string',
-            'nb_profiles' => 'nullable|integer|min:1|max:10',
+            'platform_id'  => 'required|exists:platforms,id',
+            'email'        => 'required|email',
+            'password'     => 'required|string',
+            'status'       => 'in:active,expired',
+            'notes'        => 'nullable|string',
+            'nb_profiles'  => 'nullable|integer|min:1|max:10',
+            'generate_pins' => 'nullable|boolean',
         ]);
 
         $account = MasterAccount::create($data);
 
         if (!empty($data['nb_profiles'])) {
+            $generatePins = $data['generate_pins'] ?? true;
             for ($i = 1; $i <= $data['nb_profiles']; $i++) {
                 Profile::create([
                     'master_account_id' => $account->id,
                     'profile_name'      => "Profil $i",
+                    'pin_code'          => $generatePins ? str_pad(random_int(1000, 9999), 4, '0', STR_PAD_LEFT) : null,
                     'status'            => 'available',
                 ]);
             }

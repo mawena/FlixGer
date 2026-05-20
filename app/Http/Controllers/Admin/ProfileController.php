@@ -31,6 +31,10 @@ class ProfileController extends Controller
             'pin_code'          => 'nullable|string|max:20',
         ]);
 
+        if (empty($data['pin_code'])) {
+            $data['pin_code'] = str_pad(random_int(1000, 9999), 4, '0', STR_PAD_LEFT);
+        }
+
         return response()->json(Profile::create($data), 201);
     }
 

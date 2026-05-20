@@ -10,7 +10,7 @@ class MasterAccount extends Model
 {
     protected $fillable = ['platform_id', 'email', 'password', 'status', 'notes'];
 
-    protected $hidden = ['password'];
+    protected $hidden = [];
 
     public function platform(): BelongsTo
     {

@@ -26,6 +26,7 @@ const headers = [
   { title: 'Profil', key: 'profile_name' },
   { title: 'Plateforme', key: 'platform' },
   { title: 'Compte', key: 'account' },
+  { title: 'PIN', key: 'pin_code' },
   { title: 'Statut', key: 'status' },
   { title: 'Assigné à', key: 'client' },
   { title: 'Expire', key: 'end_date' },
@@ -85,6 +86,10 @@ const deleteProfile = async (p) => {
 
 const statusColor = s => s === 'available' ? 'success' : 'warning'
 const statusLabel = s => s === 'available' ? 'Disponible' : 'Assigné'
+
+const pinVisible = reactive({})
+const togglePin = (id) => { pinVisible[id] = !pinVisible[id] }
+const generatePin = () => { form.value.pin_code = String(Math.floor(1000 + Math.random() * 9000)) }
 </script>
 
 <template>
@@ -138,6 +143,23 @@ const statusLabel = s => s === 'available' ? 'Disponible' : 'Assigné'
           <span class="text-body-2">{{ item.master_account?.email }}</span>
         </template>
 
+        <template #item.pin_code="{ item }">
+          <div class="d-flex align-center gap-1">
+            <span class="font-mono text-body-2">
+              {{ pinVisible[item.id] ? (item.pin_code || '–') : (item.pin_code ? '••••' : '–') }}
+            </span>
+            <VBtn
+              v-if="item.pin_code"
+              icon
+              size="x-small"
+              variant="text"
+              @click="togglePin(item.id)"
+            >
+              <VIcon :icon="pinVisible[item.id] ? 'tabler-eye-off' : 'tabler-eye'" size="14" />
+            </VBtn>
+          </div>
+        </template>
+
         <template #item.status="{ item }">
           <VChip :color="statusColor(item.status)" size="small" label>
             {{ statusLabel(item.status) }}
@@ -183,7 +205,23 @@ const statusLabel = s => s === 'available' ? 'Disponible' : 'Assigné'
         <VCardTitle class="pa-4">Modifier le profil</VCardTitle>
         <VCardText>
           <VTextField v-model="form.profile_name" label="Nom du profil" :error-messages="formErrors.profile_name" class="mb-3" />
-          <VTextField v-model="form.pin_code" label="Code PIN (optionnel)" :error-messages="formErrors.pin_code" class="mb-3" />
+          <div class="d-flex gap-2 align-start mb-3">
+            <VTextField
+              v-model="form.pin_code"
+              label="Code PIN (optionnel)"
+              :error-messages="formErrors.pin_code"
+              class="flex-grow-1"
+            />
+            <VBtn
+              variant="tonal"
+              color="secondary"
+              class="mt-1"
+              @click="generatePin"
+            >
+              <VIcon start icon="tabler-refresh" size="16" />
+              Générer
+            </VBtn>
+          </div>
           <VSelect
             v-model="form.status"
             :items="[{ title: 'Disponible', value: 'available' }, { title: 'Assigné', value: 'occupied' }]"
