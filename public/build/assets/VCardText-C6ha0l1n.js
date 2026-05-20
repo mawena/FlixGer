@@ -1,1 +1,0 @@
-import{ae as s,af as r,aH as o,b as n,H as c,v as m,ah as l,aj as p}from"./main-DqATMAkx.js";const d=r({opacity:[Number,String],...p(),...l()},"VCardText"),x=s()({name:"VCardText",props:d(),setup(a,e){let{slots:t}=e;return o(()=>n(a.tag,{class:m(["v-card-text",a.class]),style:c([{"--v-card-text-opacity":a.opacity},a.style])},t)),{}}});export{x as V};
