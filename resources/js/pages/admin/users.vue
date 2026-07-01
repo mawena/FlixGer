@@ -1,10 +1,14 @@
 <script setup>
+import { useDisplay } from 'vuetify'
+
 definePage({
   meta: {
     action: 'manage',
     subject: 'all',
   },
 })
+
+const { smAndDown } = useDisplay()
 
 // ── State ─────────────────────────────────────────────
 const users = ref([])
@@ -367,12 +371,12 @@ const statusConfig = {
 <template>
   <div>
     <!-- ── Header ── -->
-    <div class="d-flex justify-space-between align-center flex-wrap gap-3 mb-6">
+    <div class="d-flex flex-column flex-sm-row justify-space-between align-start align-sm-center flex-wrap gap-3 mb-6">
       <div>
         <h2 class="text-h5 font-weight-bold">Gestion des Utilisateurs</h2>
         <p class="text-body-2 text-medium-emphasis mb-0">Administrateurs et clients de la plateforme</p>
       </div>
-      <div class="d-flex gap-2">
+      <div class="d-flex flex-wrap gap-2">
         <VBtn variant="outlined" :loading="loading" @click="fetchUsers">
           <VIcon start icon="tabler-refresh" />
           Recharger
@@ -526,7 +530,7 @@ const statusConfig = {
     <!-- ══════════════════════════════════════════════
          Dialog Création / Modification
     ══════════════════════════════════════════════ -->
-    <VDialog v-model="dialog" max-width="520">
+    <VDialog v-model="dialog" max-width="520" scrollable :fullscreen="smAndDown">
       <VCard>
         <VCardTitle class="pa-5 d-flex align-center gap-2">
           <VIcon :icon="selectedUser ? 'tabler-user-edit' : 'tabler-user-plus'" color="primary" />
@@ -605,7 +609,7 @@ const statusConfig = {
     <!-- ══════════════════════════════════════════════
          Dialog Détail utilisateur
     ══════════════════════════════════════════════ -->
-    <VDialog v-model="detailDialog" max-width="640" scrollable>
+    <VDialog v-model="detailDialog" max-width="640" scrollable :fullscreen="smAndDown">
       <VCard v-if="selectedUser">
         <VCardTitle class="pa-5 d-flex align-center justify-space-between">
           <div class="d-flex align-center gap-3">
@@ -775,7 +779,7 @@ const statusConfig = {
     <!-- ══════════════════════════════════════════════
          Dialog Création par téléphone (client direct)
     ══════════════════════════════════════════════ -->
-    <VDialog v-model="phoneDialog" max-width="480">
+    <VDialog v-model="phoneDialog" max-width="480" scrollable :fullscreen="smAndDown">
       <VCard>
         <VCardTitle class="pa-5 d-flex align-center gap-2">
           <VIcon icon="tabler-brand-whatsapp" color="success" />
@@ -901,7 +905,7 @@ const statusConfig = {
     <!-- ══════════════════════════════════════════════
          Dialog Identifiants générés
     ══════════════════════════════════════════════ -->
-    <VDialog v-model="credentialsDialog" max-width="480" persistent>
+    <VDialog v-model="credentialsDialog" max-width="480" persistent scrollable :fullscreen="smAndDown">
       <VCard v-if="createdCredentials">
         <VCardTitle class="pa-5 d-flex align-center gap-2">
           <VIcon icon="tabler-circle-check" color="success" />

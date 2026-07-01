@@ -26,6 +26,8 @@ export default {
     label: true,
   },
   VDataTable: {
+    // Vue « cartes » empilées sur mobile (< 600px) au lieu d'un tableau qui déborde
+    mobileBreakpoint: 'sm',
     VPagination: {
       showFirstLastPage: true,
       firstIcon: 'tabler-chevrons-left',
@@ -33,6 +35,7 @@ export default {
     },
   },
   VDataTableServer: {
+    mobileBreakpoint: 'sm',
     VPagination: {
       showFirstLastPage: true,
       firstIcon: 'tabler-chevrons-left',

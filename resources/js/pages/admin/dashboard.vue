@@ -38,7 +38,7 @@ const statusLabel = (status) => {
 
 <template>
   <div>
-    <div class="d-flex justify-space-between align-center mb-6">
+    <div class="d-flex flex-column flex-sm-row justify-space-between align-start align-sm-center gap-3 mb-6">
       <div>
         <h2 class="text-h5 font-weight-bold">Tableau de bord</h2>
         <p class="text-body-2 text-medium-emphasis mb-0">Vue d'ensemble de votre activité FlixGer</p>

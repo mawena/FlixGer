@@ -1,10 +1,14 @@
 <script setup>
+import { useDisplay } from 'vuetify'
+
 definePage({
   meta: {
     action: 'manage',
     subject: 'all',
   },
 })
+
+const { smAndDown } = useDisplay()
 
 const accounts = ref([])
 const platforms = ref([])
@@ -130,12 +134,12 @@ const profileStatusColor = s => s === 'available' ? 'success' : 'warning'
 
 <template>
   <div>
-    <div class="d-flex justify-space-between align-center mb-6">
+    <div class="d-flex flex-column flex-sm-row justify-space-between align-start align-sm-center gap-3 mb-6">
       <div>
         <h2 class="text-h5 font-weight-bold">Comptes Maîtres</h2>
-        <p class="text-body-2 text-medium-emphasis">Gérez les comptes de streaming et leurs profils</p>
+        <p class="text-body-2 text-medium-emphasis mb-0">Gérez les comptes de streaming et leurs profils</p>
       </div>
-      <div class="d-flex gap-2">
+      <div class="d-flex flex-wrap gap-2">
         <VBtn variant="outlined" :loading="loading" @click="fetchData">
           <VIcon start icon="tabler-refresh" />
           Recharger
@@ -222,7 +226,7 @@ const profileStatusColor = s => s === 'available' ? 'success' : 'warning'
     </VCard>
 
     <!-- Dialog -->
-    <VDialog v-model="dialog" max-width="520">
+    <VDialog v-model="dialog" max-width="520" scrollable :fullscreen="smAndDown">
       <VCard>
         <VCardTitle class="pa-4">
           {{ selectedAccount ? 'Modifier le compte' : 'Ajouter un compte' }}

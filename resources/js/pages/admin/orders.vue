@@ -1,10 +1,14 @@
 <script setup>
+import { useDisplay } from 'vuetify'
+
 definePage({
   meta: {
     action: 'manage',
     subject: 'all',
   },
 })
+
+const { smAndDown } = useDisplay()
 
 const orders = ref([])
 const loading = ref(true)
@@ -101,10 +105,10 @@ const statusLabel = s => ({ pending: 'En attente', approved: 'Validée', rejecte
 
 <template>
   <div>
-    <div class="d-flex justify-space-between align-center mb-4">
+    <div class="d-flex flex-column flex-sm-row justify-space-between align-start align-sm-center gap-3 mb-4">
       <div>
         <h2 class="text-h5 font-weight-bold">Gestion des Commandes</h2>
-        <p class="text-body-2 text-medium-emphasis">Validez les paiements et assignez les accès</p>
+        <p class="text-body-2 text-medium-emphasis mb-0">Validez les paiements et assignez les accès</p>
       </div>
       <VBtn variant="outlined" :loading="loading" @click="fetchOrders">
         <VIcon start icon="tabler-refresh" />
@@ -201,7 +205,7 @@ const statusLabel = s => ({ pending: 'En attente', approved: 'Validée', rejecte
     </VCard>
 
     <!-- Order Detail Dialog -->
-    <VDialog v-model="detailDialog" max-width="700" scrollable>
+    <VDialog v-model="detailDialog" max-width="700" scrollable :fullscreen="smAndDown">
       <VCard v-if="selectedOrder">
         <VCardTitle class="pa-4 d-flex justify-space-between">
           <span>Commande #{{ selectedOrder.id }}</span>

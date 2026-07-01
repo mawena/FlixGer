@@ -89,12 +89,12 @@ const deletePlatform = async () => {
 
 <template>
   <div>
-    <div class="d-flex justify-space-between align-center mb-6">
+    <div class="d-flex flex-column flex-sm-row justify-space-between align-start align-sm-center gap-3 mb-6">
       <div>
         <h2 class="text-h5 font-weight-bold">Plateformes</h2>
-        <p class="text-body-2 text-medium-emphasis">Gérez les plateformes de streaming</p>
+        <p class="text-body-2 text-medium-emphasis mb-0">Gérez les plateformes de streaming</p>
       </div>
-      <div class="d-flex gap-2">
+      <div class="d-flex flex-wrap gap-2">
         <VBtn variant="outlined" :loading="loading" @click="fetchPlatforms">
           <VIcon start icon="tabler-refresh" />
           Recharger

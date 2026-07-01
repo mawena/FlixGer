@@ -126,10 +126,10 @@ const generatePin = () => { form.value.pin_code = String(Math.floor(1000 + Math.
 
 <template>
   <div>
-    <div class="d-flex justify-space-between align-center mb-4">
+    <div class="d-flex flex-column flex-sm-row justify-space-between align-start align-sm-center gap-3 mb-4">
       <div>
         <h2 class="text-h5 font-weight-bold">Profils / Écrans</h2>
-        <p class="text-body-2 text-medium-emphasis">Gérez les écrans de chaque compte</p>
+        <p class="text-body-2 text-medium-emphasis mb-0">Gérez les écrans de chaque compte</p>
       </div>
       <VBtn variant="outlined" :loading="loading" @click="fetchData">
         <VIcon start icon="tabler-refresh" />
