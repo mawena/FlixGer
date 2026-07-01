@@ -96,8 +96,12 @@ class UserController extends Controller
 
     public function destroy(User $user)
     {
-        if ($user->id === auth()->id()) {
-            return response()->json(['message' => 'Vous ne pouvez pas supprimer votre propre compte.'], 422);
+        // Empêcher la suppression du dernier administrateur pour ne pas
+        // verrouiller totalement l'accès à l'espace d'administration.
+        if ($user->role === 'admin' && User::where('role', 'admin')->count() <= 1) {
+            return response()->json([
+                'message' => 'Impossible de supprimer le dernier compte administrateur.',
+            ], 422);
         }
 
         $user->delete();
