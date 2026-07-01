@@ -30,7 +30,9 @@ class UserController extends Controller
 
     public function show(User $user)
     {
-        return response()->json($user->load(['orders.platform', 'orders.profile'])->loadCount('orders'));
+        return response()->json(
+            $user->load(['orders.platform', 'orders.profile.masterAccount'])->loadCount('orders')
+        );
     }
 
     public function store(Request $request)
@@ -46,6 +48,31 @@ class UserController extends Controller
         $user = User::create($data);
 
         return response()->json($user, 201);
+    }
+
+    public function storeByPhone(Request $request)
+    {
+        $data = $request->validate([
+            'name'  => 'nullable|string|max:255',
+            'phone' => 'required|string|max:20|unique:users',
+        ]);
+
+        // Générer un mot de passe aléatoire lisible pour l'utilisateur
+        $password = \Illuminate\Support\Str::random(8);
+
+        $user = User::create([
+            'name'     => $data['name'] ?? 'Client ' . $data['phone'],
+            'email'    => 'phone_' . preg_replace('/\D/', '', $data['phone']) . '@flixger.local',
+            'phone'    => $data['phone'],
+            'role'     => 'client',
+            'password' => $password, // hashé automatiquement par le cast 'hashed'
+        ]);
+
+        // Le mot de passe en clair est renvoyé une seule fois pour le message WhatsApp.
+        return response()->json([
+            'user'           => $user->loadCount('orders'),
+            'plain_password' => $password,
+        ], 201);
     }
 
     public function update(Request $request, User $user)

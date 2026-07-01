@@ -16,16 +16,24 @@ const deleting = ref(false)
 const dialog = ref(false)
 const deleteDialog = ref(false)
 const detailDialog = ref(false)
+const phoneDialog = ref(false)
+const credentialsDialog = ref(false)
 
 const selectedUser = ref(null)
 const filterRole = ref('')
 const search = ref('')
 const formErrors = ref({})
+const phoneErrors = ref({})
 const isPasswordVisible = ref(false)
 
 const form = ref({
   name: '', email: '', phone: '', role: 'client', password: '',
 })
+
+const phoneForm = ref({ name: '', phone: '' })
+const createdCredentials = ref(null)
+
+const snackbar = ref({ show: false, text: '', color: 'success' })
 
 // ── Fetch ──────────────────────────────────────────────
 const fetchUsers = async () => {
@@ -130,6 +138,98 @@ const confirmDelete = async () => {
   }
 }
 
+// ── Création par téléphone (clients directs) ──────────
+const openPhoneCreate = () => {
+  phoneErrors.value = {}
+  phoneForm.value = { name: '', phone: '' }
+  phoneDialog.value = true
+}
+
+const createByPhone = async () => {
+  saving.value = true
+  phoneErrors.value = {}
+  try {
+    const { data, error } = await useApi('/admin/users/by-phone', {
+      method: 'POST',
+      body: JSON.stringify(phoneForm.value),
+    })
+
+    if (error.value) {
+      phoneErrors.value = error.value?.data?.errors || {}
+      if (!Object.keys(phoneErrors.value).length)
+        phoneErrors.value._general = error.value?.data?.message || 'Une erreur est survenue'
+      return
+    }
+
+    phoneDialog.value = false
+    createdCredentials.value = {
+      name: data.value?.user?.name,
+      phone: data.value?.user?.phone,
+      password: data.value?.plain_password,
+    }
+    credentialsDialog.value = true
+    await fetchUsers()
+  } finally {
+    saving.value = false
+  }
+}
+
+// ── WhatsApp / presse-papiers ─────────────────────────
+const siteUrl = window.location.origin
+
+const normalizePhone = (phone) => {
+  let p = String(phone || '').replace(/\D/g, '')
+  if (p.length === 8) p = `228${p}` // Indicatif Togo par défaut
+  return p
+}
+
+const showSnack = (text, color = 'success') => {
+  snackbar.value = { show: true, text, color }
+}
+
+const copyText = async (text) => {
+  try {
+    await navigator.clipboard.writeText(text)
+    showSnack('Message copié ✔')
+  } catch {
+    // Fallback pour les navigateurs sans API clipboard (ex. http)
+    const ta = document.createElement('textarea')
+    ta.value = text
+    document.body.appendChild(ta)
+    ta.select()
+    document.execCommand('copy')
+    document.body.removeChild(ta)
+    showSnack('Message copié ✔')
+  }
+}
+
+const openWhatsapp = (phone, text) => {
+  window.open(`https://wa.me/${normalizePhone(phone)}?text=${encodeURIComponent(text)}`, '_blank')
+}
+
+// Message d'accès à une plateforme (abonnement validé)
+const accessMessage = (user, order) => {
+  const acc = order.profile?.master_account || {}
+  return `Bonjour ${user.name} 👋\n\n`
+    + `Voici vos accès pour votre abonnement *${order.platform?.name}* sur FlixGer :\n\n`
+    + `📧 Email : ${acc.email || '—'}\n`
+    + `🔒 Mot de passe : ${acc.password || '—'}\n`
+    + `👤 Profil : ${order.profile?.profile_name || '—'}\n`
+    + `🔑 Code PIN : ${order.profile?.pin_code || '—'}\n\n`
+    + `📅 Valable jusqu'au : ${order.end_date || '—'}\n\n`
+    + `Bon visionnage ! 🎬`
+}
+
+// Message d'identifiants de connexion au compte FlixGer
+const loginMessage = (name, phone, password) => `Bonjour ${name || ''} 👋\n\n`
+  + `Votre compte FlixGer a bien été créé.\n\n`
+  + `🔗 Site : ${siteUrl}\n`
+  + `👤 Identifiant : ${phone}\n`
+  + `🔒 Mot de passe : ${password}\n\n`
+  + `Connectez-vous puis pensez à changer votre mot de passe. À bientôt sur FlixGer ! 🎬`
+
+const orderHasAccess = order => order.status === 'approved' && order.profile?.master_account
+
 // ── Helpers ───────────────────────────────────────────
 const roleColor = r => r === 'admin' ? 'error' : 'primary'
 const roleIcon  = r => r === 'admin' ? 'tabler-shield-filled' : 'tabler-user'
@@ -170,6 +270,10 @@ const statusConfig = {
         <VBtn variant="outlined" :loading="loading" @click="fetchUsers">
           <VIcon start icon="tabler-refresh" />
           Recharger
+        </VBtn>
+        <VBtn color="success" variant="tonal" @click="openPhoneCreate">
+          <VIcon start icon="tabler-brand-whatsapp" />
+          Client direct (téléphone)
         </VBtn>
         <VBtn color="primary" @click="openCreate">
           <VIcon start icon="tabler-user-plus" />
@@ -465,6 +569,49 @@ const statusConfig = {
                     {{ statusConfig[order.status]?.label }}
                   </VChip>
                 </div>
+
+                <!-- Accès + message WhatsApp (abonnement validé) -->
+                <template v-if="orderHasAccess(order)">
+                  <VDivider class="my-3" />
+                  <div class="d-flex flex-wrap gap-4 mb-3">
+                    <div>
+                      <div class="text-caption text-medium-emphasis">Email</div>
+                      <div class="text-body-2 font-weight-medium">{{ order.profile?.master_account?.email }}</div>
+                    </div>
+                    <div>
+                      <div class="text-caption text-medium-emphasis">Mot de passe</div>
+                      <div class="text-body-2 font-weight-medium">{{ order.profile?.master_account?.password }}</div>
+                    </div>
+                    <div>
+                      <div class="text-caption text-medium-emphasis">Profil</div>
+                      <div class="text-body-2 font-weight-medium">{{ order.profile?.profile_name || '–' }}</div>
+                    </div>
+                    <div>
+                      <div class="text-caption text-medium-emphasis">Code PIN</div>
+                      <div class="text-body-2 font-weight-medium">{{ order.profile?.pin_code || '–' }}</div>
+                    </div>
+                  </div>
+                  <div class="d-flex gap-2 flex-wrap">
+                    <VBtn
+                      size="small"
+                      color="success"
+                      variant="flat"
+                      @click="openWhatsapp(selectedUser.phone, accessMessage(selectedUser, order))"
+                    >
+                      <VIcon start icon="tabler-brand-whatsapp" />
+                      Envoyer sur WhatsApp
+                    </VBtn>
+                    <VBtn
+                      size="small"
+                      color="success"
+                      variant="outlined"
+                      @click="copyText(accessMessage(selectedUser, order))"
+                    >
+                      <VIcon start icon="tabler-copy" />
+                      Copier le message
+                    </VBtn>
+                  </div>
+                </template>
               </VCardText>
             </VCard>
           </template>
@@ -518,5 +665,118 @@ const statusConfig = {
         </VCardActions>
       </VCard>
     </VDialog>
+
+    <!-- ══════════════════════════════════════════════
+         Dialog Création par téléphone (client direct)
+    ══════════════════════════════════════════════ -->
+    <VDialog v-model="phoneDialog" max-width="480">
+      <VCard>
+        <VCardTitle class="pa-5 d-flex align-center gap-2">
+          <VIcon icon="tabler-brand-whatsapp" color="success" />
+          Ajouter un client direct
+        </VCardTitle>
+        <VDivider />
+        <VCardText class="pa-5">
+          <VAlert type="info" variant="tonal" density="compact" class="mb-4">
+            Pour un client qui vous a contacté directement (WhatsApp, etc.).
+            Seul le numéro de téléphone est requis&nbsp;: un compte est créé et un mot de passe
+            généré automatiquement pour lui envoyer ses identifiants.
+          </VAlert>
+
+          <VAlert v-if="phoneErrors._general" type="error" variant="tonal" density="compact" class="mb-4">
+            {{ phoneErrors._general }}
+          </VAlert>
+
+          <VRow dense>
+            <VCol cols="12">
+              <VTextField
+                v-model="phoneForm.phone"
+                label="Numéro de téléphone"
+                placeholder="Ex : 90 00 00 00"
+                prepend-inner-icon="tabler-device-mobile"
+                :error-messages="phoneErrors.phone"
+              />
+            </VCol>
+            <VCol cols="12">
+              <VTextField
+                v-model="phoneForm.name"
+                label="Nom (facultatif)"
+                prepend-inner-icon="tabler-user"
+                :error-messages="phoneErrors.name"
+              />
+            </VCol>
+          </VRow>
+        </VCardText>
+        <VDivider />
+        <VCardActions class="pa-4">
+          <VSpacer />
+          <VBtn variant="outlined" @click="phoneDialog = false">Annuler</VBtn>
+          <VBtn color="success" :loading="saving" @click="createByPhone">
+            <VIcon start icon="tabler-user-plus" />
+            Créer le compte
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
+
+    <!-- ══════════════════════════════════════════════
+         Dialog Identifiants générés
+    ══════════════════════════════════════════════ -->
+    <VDialog v-model="credentialsDialog" max-width="480" persistent>
+      <VCard v-if="createdCredentials">
+        <VCardTitle class="pa-5 d-flex align-center gap-2">
+          <VIcon icon="tabler-circle-check" color="success" />
+          Compte créé
+        </VCardTitle>
+        <VDivider />
+        <VCardText class="pa-5">
+          <VAlert type="warning" variant="tonal" density="compact" class="mb-4">
+            Notez ou envoyez ces identifiants maintenant&nbsp;: le mot de passe
+            ne sera plus affiché ensuite.
+          </VAlert>
+
+          <VList density="compact" class="mb-2">
+            <VListItem prepend-icon="tabler-user">
+              <VListItemTitle>{{ createdCredentials.name }}</VListItemTitle>
+              <VListItemSubtitle>Nom</VListItemSubtitle>
+            </VListItem>
+            <VListItem prepend-icon="tabler-device-mobile">
+              <VListItemTitle>{{ createdCredentials.phone }}</VListItemTitle>
+              <VListItemSubtitle>Identifiant (téléphone)</VListItemSubtitle>
+            </VListItem>
+            <VListItem prepend-icon="tabler-lock">
+              <VListItemTitle class="font-weight-bold">{{ createdCredentials.password }}</VListItemTitle>
+              <VListItemSubtitle>Mot de passe</VListItemSubtitle>
+            </VListItem>
+          </VList>
+        </VCardText>
+        <VDivider />
+        <VCardActions class="pa-4 flex-wrap gap-2">
+          <VBtn
+            color="success"
+            variant="flat"
+            @click="openWhatsapp(createdCredentials.phone, loginMessage(createdCredentials.name, createdCredentials.phone, createdCredentials.password))"
+          >
+            <VIcon start icon="tabler-brand-whatsapp" />
+            Envoyer sur WhatsApp
+          </VBtn>
+          <VBtn
+            color="success"
+            variant="outlined"
+            @click="copyText(loginMessage(createdCredentials.name, createdCredentials.phone, createdCredentials.password))"
+          >
+            <VIcon start icon="tabler-copy" />
+            Copier
+          </VBtn>
+          <VSpacer />
+          <VBtn variant="tonal" @click="credentialsDialog = false">Fermer</VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
+
+    <!-- ── Snackbar ── -->
+    <VSnackbar v-model="snackbar.show" :color="snackbar.color" location="top end" timeout="2500">
+      {{ snackbar.text }}
+    </VSnackbar>
   </div>
 </template>

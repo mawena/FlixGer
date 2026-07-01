@@ -8,7 +8,7 @@ use App\Http\Controllers\Admin\PlatformController as AdminPlatformController;
 use App\Http\Controllers\Admin\MasterAccountController;
 use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
-use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
 use Illuminate\Support\Facades\Route;
 
 // Public
@@ -30,15 +30,16 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Admin routes
-    Route::prefix('admin')->middleware('can:manage,all')->group(function () {
+    Route::middleware('auth:sanctum')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index']);
 
         Route::apiResource('platforms', AdminPlatformController::class);
         Route::apiResource('accounts', MasterAccountController::class);
         Route::apiResource('profiles', ProfileController::class)->except(['show']);
 
-        Route::get('/users/stats', [UserController::class, 'stats']);
-        Route::apiResource('users', UserController::class);
+        Route::get('/users/stats', [AdminUserController::class, 'stats']);
+        Route::post('users/by-phone', [AdminUserController::class, 'storeByPhone'])->name('users.storeByPhone');
+        Route::apiResource('users', AdminUserController::class);
 
         Route::get('/orders', [AdminOrderController::class, 'index']);
         Route::get('/orders/{order}', [AdminOrderController::class, 'show']);

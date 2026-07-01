@@ -1,0 +1,1 @@
+import{ae as o,bk as r,bj as a}from"./main-DNZn11oY.js";import{a as p}from"./VSlideGroup-DGhyQgNT.js";const c=o()({name:"VSlideGroupItem",props:r(),emits:{"group:selected":t=>!0},setup(t,s){let{slots:l}=s;const e=a(t,p);return()=>l.default?.({isSelected:e.isSelected.value,select:e.select,toggle:e.toggle,selectedClass:e.selectedClass.value})}});export{c as V};
