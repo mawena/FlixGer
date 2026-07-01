@@ -55,24 +55,89 @@ class UserController extends Controller
         $data = $request->validate([
             'name'  => 'nullable|string|max:255',
             'phone' => 'required|string|max:20|unique:users',
+
+            // Abonnement facultatif à créer et lier en même temps que le compte
+            'subscription'              => 'nullable|array',
+            'subscription.platform_id'  => 'required_with:subscription|exists:platforms,id',
+            'subscription.profile_id'   => 'required_with:subscription|exists:profiles,id',
+            'subscription.profile_name' => 'nullable|string|max:100',
+            'subscription.pin_code'     => 'nullable|string|max:20',
+            'subscription.start_date'   => 'required_with:subscription|date',
+            'subscription.end_date'     => 'required_with:subscription|date|after_or_equal:subscription.start_date',
         ]);
 
         // Générer un mot de passe aléatoire lisible pour l'utilisateur
         $password = \Illuminate\Support\Str::random(8);
 
-        $user = User::create([
-            'name'     => $data['name'] ?? 'Client ' . $data['phone'],
-            'email'    => 'phone_' . preg_replace('/\D/', '', $data['phone']) . '@flixger.local',
-            'phone'    => $data['phone'],
-            'role'     => 'client',
-            'password' => $password, // hashé automatiquement par le cast 'hashed'
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($data, $password) {
+            $user = User::create([
+                'name'     => $data['name'] ?? 'Client ' . $data['phone'],
+                'email'    => 'phone_' . preg_replace('/\D/', '', $data['phone']) . '@flixger.local',
+                'phone'    => $data['phone'],
+                'role'     => 'client',
+                'password' => $password, // hashé automatiquement par le cast 'hashed'
+            ]);
+
+            $subscriptionPayload = null;
+
+            if (!empty($data['subscription'])) {
+                $subscriptionPayload = $this->createSubscriptionFor($user, $data['subscription']);
+            }
+
+            // Le mot de passe en clair est renvoyé une seule fois pour le message WhatsApp.
+            return response()->json([
+                'user'           => $user->loadCount('orders'),
+                'plain_password' => $password,
+                'subscription'   => $subscriptionPayload,
+            ], 201);
+        });
+    }
+
+    /**
+     * Crée un abonnement approuvé pour l'utilisateur en liant un profil disponible
+     * de la plateforme choisie, et retourne les infos nécessaires au message WhatsApp.
+     */
+    private function createSubscriptionFor(User $user, array $sub): array
+    {
+        $profile = \App\Models\Profile::with('masterAccount')
+            ->whereHas('masterAccount', fn($q) => $q->where('platform_id', $sub['platform_id']))
+            ->findOrFail($sub['profile_id']);
+
+        // Autoriser la personnalisation du nom du profil et du code PIN si fournis.
+        $profile->fill(array_filter([
+            'profile_name' => $sub['profile_name'] ?? null,
+            'pin_code'     => $sub['pin_code'] ?? null,
+        ]));
+        $profile->status = 'occupied';
+        $profile->save();
+
+        $platform = \App\Models\Platform::findOrFail($sub['platform_id']);
+        $start = \Illuminate\Support\Carbon::parse($sub['start_date']);
+        $end   = \Illuminate\Support\Carbon::parse($sub['end_date']);
+        $months = max(1, (int) round($start->diffInDays($end) / 30));
+
+        $order = Order::create([
+            'user_id'          => $user->id,
+            'platform_id'      => $platform->id,
+            'profile_id'       => $profile->id,
+            'duration_months'  => $months,
+            'total_amount'     => $platform->price_per_month * $months,
+            'status'           => 'approved',
+            'payment_verified' => true,
+            'start_date'       => $start->toDateString(),
+            'end_date'         => $end->toDateString(),
         ]);
 
-        // Le mot de passe en clair est renvoyé une seule fois pour le message WhatsApp.
-        return response()->json([
-            'user'           => $user->loadCount('orders'),
-            'plain_password' => $password,
-        ], 201);
+        return [
+            'order_id'         => $order->id,
+            'platform_name'    => $platform->name,
+            'account_email'    => $profile->masterAccount->email,
+            'account_password' => $profile->masterAccount->password,
+            'profile_name'     => $profile->profile_name,
+            'pin_code'         => $profile->pin_code,
+            'start_date'       => $order->start_date->toDateString(),
+            'end_date'         => $order->end_date->toDateString(),
+        ];
     }
 
     public function update(Request $request, User $user)

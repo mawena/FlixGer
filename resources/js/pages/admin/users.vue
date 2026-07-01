@@ -33,6 +33,20 @@ const form = ref({
 const phoneForm = ref({ name: '', phone: '' })
 const createdCredentials = ref(null)
 
+// ── Abonnement facultatif lors de la création par téléphone ──
+const withSubscription = ref(false)
+const platforms = ref([])
+const availableProfiles = ref([])
+const loadingProfiles = ref(false)
+const subForm = ref({
+  platform_id: null,
+  profile_id: null,
+  profile_name: '',
+  pin_code: '',
+  start_date: '',
+  end_date: '',
+})
+
 const snackbar = ref({ show: false, text: '', color: 'success' })
 
 // ── Fetch ──────────────────────────────────────────────
@@ -139,24 +153,94 @@ const confirmDelete = async () => {
 }
 
 // ── Création par téléphone (clients directs) ──────────
-const openPhoneCreate = () => {
+const todayISO = () => new Date().toISOString().slice(0, 10)
+const addMonthsISO = (iso, months) => {
+  const d = new Date(iso)
+  d.setMonth(d.getMonth() + months)
+  return d.toISOString().slice(0, 10)
+}
+
+const openPhoneCreate = async () => {
   phoneErrors.value = {}
   phoneForm.value = { name: '', phone: '' }
+  withSubscription.value = false
+  availableProfiles.value = []
+  subForm.value = {
+    platform_id: null,
+    profile_id: null,
+    profile_name: '',
+    pin_code: '',
+    start_date: todayISO(),
+    end_date: addMonthsISO(todayISO(), 1),
+  }
   phoneDialog.value = true
+
+  if (!platforms.value.length) {
+    const { data } = await useApi('/platforms')
+    platforms.value = data.value || []
+  }
+}
+
+// Charger les profils disponibles quand la plateforme change
+const onPlatformChange = async () => {
+  subForm.value.profile_id = null
+  subForm.value.profile_name = ''
+  subForm.value.pin_code = ''
+  availableProfiles.value = []
+  if (!subForm.value.platform_id) return
+
+  loadingProfiles.value = true
+  try {
+    const { data } = await useApi(`/admin/profiles?status=available&platform_id=${subForm.value.platform_id}`)
+    availableProfiles.value = data.value || []
+  } finally {
+    loadingProfiles.value = false
+  }
+}
+
+// Pré-remplir nom + code éditables depuis le profil sélectionné
+const onProfileChange = () => {
+  const p = availableProfiles.value.find(x => x.id === subForm.value.profile_id)
+  subForm.value.profile_name = p?.profile_name || ''
+  subForm.value.pin_code = p?.pin_code || ''
+}
+
+const profileLabel = (p) => {
+  const acc = p.master_account?.email || '—'
+  return `${p.profile_name} · ${acc}`
 }
 
 const createByPhone = async () => {
   saving.value = true
   phoneErrors.value = {}
   try {
+    const payload = { ...phoneForm.value }
+    if (withSubscription.value) {
+      payload.subscription = {
+        platform_id:  subForm.value.platform_id,
+        profile_id:   subForm.value.profile_id,
+        profile_name: subForm.value.profile_name,
+        pin_code:     subForm.value.pin_code,
+        start_date:   subForm.value.start_date,
+        end_date:     subForm.value.end_date,
+      }
+    }
+
     const { data, error } = await useApi('/admin/users/by-phone', {
       method: 'POST',
-      body: JSON.stringify(phoneForm.value),
+      body: JSON.stringify(payload),
     })
 
     if (error.value) {
-      phoneErrors.value = error.value?.data?.errors || {}
-      if (!Object.keys(phoneErrors.value).length)
+      const errs = error.value?.data?.errors || {}
+      phoneErrors.value = errs
+      // Remonter les erreurs d'abonnement (clés « subscription.* ») dans le message général
+      const subMsgs = Object.entries(errs)
+        .filter(([k]) => k.startsWith('subscription.'))
+        .flatMap(([, v]) => v)
+      if (subMsgs.length)
+        phoneErrors.value._general = subMsgs.join(' ')
+      else if (!Object.keys(errs).length)
         phoneErrors.value._general = error.value?.data?.message || 'Une erreur est survenue'
       return
     }
@@ -166,6 +250,7 @@ const createByPhone = async () => {
       name: data.value?.user?.name,
       phone: data.value?.user?.phone,
       password: data.value?.plain_password,
+      subscription: data.value?.subscription || null,
     }
     credentialsDialog.value = true
     await fetchUsers()
@@ -220,13 +305,34 @@ const accessMessage = (user, order) => {
     + `Bon visionnage ! 🎬`
 }
 
-// Message d'identifiants de connexion au compte FlixGer
-const loginMessage = (name, phone, password) => `Bonjour ${name || ''} 👋\n\n`
-  + `Votre compte FlixGer a bien été créé.\n\n`
-  + `🔗 Site : ${siteUrl}\n`
-  + `👤 Identifiant : ${phone}\n`
-  + `🔒 Mot de passe : ${password}\n\n`
-  + `Connectez-vous puis pensez à changer votre mot de passe. À bientôt sur FlixGer ! 🎬`
+// Message complet : abonnement (compte maître + profil) + PS identifiants du site
+const fullMessage = (c) => {
+  const s = c.subscription
+  let msg = `Bonjour ${c.name || ''} 👋\n\n`
+
+  if (s) {
+    msg += `Voici votre abonnement *${s.platform_name}* sur FlixGer :\n\n`
+      + `📧 Email : ${s.account_email}\n`
+      + `🔒 Mot de passe : ${s.account_password}\n`
+      + `👤 Profil : ${s.profile_name}\n`
+      + `🔑 Code PIN : ${s.pin_code || '—'}\n\n`
+      + `📅 Du ${s.start_date} au ${s.end_date}\n\n`
+      + `Bon visionnage ! 🎬\n\n`
+      + `――――――――――\n`
+      + `PS : un compte a aussi été créé pour vous sur FlixGer (${siteUrl}).\n`
+      + `👤 Identifiant : ${c.phone}\n`
+      + `🔒 Mot de passe : ${c.password}\n\n`
+      + `Connectez-vous pour souscrire à de nouveaux abonnements et suivre tous vos abonnements en cours. 😊`
+  } else {
+    msg += `Votre compte FlixGer a bien été créé.\n\n`
+      + `🔗 Site : ${siteUrl}\n`
+      + `👤 Identifiant : ${c.phone}\n`
+      + `🔒 Mot de passe : ${c.password}\n\n`
+      + `Connectez-vous puis pensez à changer votre mot de passe. À bientôt sur FlixGer ! 🎬`
+  }
+
+  return msg
+}
 
 const orderHasAccess = order => order.status === 'approved' && order.profile?.master_account
 
@@ -706,6 +812,79 @@ const statusConfig = {
               />
             </VCol>
           </VRow>
+
+          <VDivider class="my-4" />
+
+          <VSwitch
+            v-model="withSubscription"
+            color="primary"
+            label="Créer aussi un abonnement (facultatif)"
+            density="compact"
+          />
+
+          <VExpandTransition>
+            <div v-if="withSubscription" class="mt-2">
+              <VRow dense>
+                <VCol cols="12">
+                  <VSelect
+                    v-model="subForm.platform_id"
+                    :items="platforms"
+                    item-title="name"
+                    item-value="id"
+                    label="Plateforme"
+                    prepend-inner-icon="tabler-device-tv"
+                    @update:model-value="onPlatformChange"
+                  />
+                </VCol>
+                <VCol cols="12">
+                  <VSelect
+                    v-model="subForm.profile_id"
+                    :items="availableProfiles"
+                    :item-title="profileLabel"
+                    item-value="id"
+                    label="Profil à attribuer"
+                    :loading="loadingProfiles"
+                    :disabled="!subForm.platform_id"
+                    :no-data-text="subForm.platform_id ? 'Aucun profil disponible' : 'Choisissez une plateforme'"
+                    prepend-inner-icon="tabler-user-circle"
+                    @update:model-value="onProfileChange"
+                  />
+                </VCol>
+                <VCol cols="12" sm="6">
+                  <VTextField
+                    v-model="subForm.profile_name"
+                    label="Nom du profil"
+                    :disabled="!subForm.profile_id"
+                    prepend-inner-icon="tabler-tag"
+                  />
+                </VCol>
+                <VCol cols="12" sm="6">
+                  <VTextField
+                    v-model="subForm.pin_code"
+                    label="Code PIN"
+                    :disabled="!subForm.profile_id"
+                    prepend-inner-icon="tabler-key"
+                  />
+                </VCol>
+                <VCol cols="12" sm="6">
+                  <VTextField
+                    v-model="subForm.start_date"
+                    type="date"
+                    label="Date de début"
+                    prepend-inner-icon="tabler-calendar"
+                  />
+                </VCol>
+                <VCol cols="12" sm="6">
+                  <VTextField
+                    v-model="subForm.end_date"
+                    type="date"
+                    label="Date de fin"
+                    prepend-inner-icon="tabler-calendar-check"
+                  />
+                </VCol>
+              </VRow>
+            </div>
+          </VExpandTransition>
         </VCardText>
         <VDivider />
         <VCardActions class="pa-4">
@@ -749,13 +928,40 @@ const statusConfig = {
               <VListItemSubtitle>Mot de passe</VListItemSubtitle>
             </VListItem>
           </VList>
+
+          <template v-if="createdCredentials.subscription">
+            <VDivider class="my-3" />
+            <p class="text-caption text-medium-emphasis mb-2">Abonnement créé</p>
+            <VList density="compact" class="mb-2">
+              <VListItem prepend-icon="tabler-device-tv">
+                <VListItemTitle>{{ createdCredentials.subscription.platform_name }}</VListItemTitle>
+                <VListItemSubtitle>Plateforme</VListItemSubtitle>
+              </VListItem>
+              <VListItem prepend-icon="tabler-mail">
+                <VListItemTitle>{{ createdCredentials.subscription.account_email }}</VListItemTitle>
+                <VListItemSubtitle>Email du compte maître</VListItemSubtitle>
+              </VListItem>
+              <VListItem prepend-icon="tabler-lock">
+                <VListItemTitle>{{ createdCredentials.subscription.account_password }}</VListItemTitle>
+                <VListItemSubtitle>Mot de passe du compte maître</VListItemSubtitle>
+              </VListItem>
+              <VListItem prepend-icon="tabler-user-circle">
+                <VListItemTitle>{{ createdCredentials.subscription.profile_name }} · PIN {{ createdCredentials.subscription.pin_code || '—' }}</VListItemTitle>
+                <VListItemSubtitle>Profil attribué</VListItemSubtitle>
+              </VListItem>
+              <VListItem prepend-icon="tabler-calendar">
+                <VListItemTitle>{{ createdCredentials.subscription.start_date }} → {{ createdCredentials.subscription.end_date }}</VListItemTitle>
+                <VListItemSubtitle>Période</VListItemSubtitle>
+              </VListItem>
+            </VList>
+          </template>
         </VCardText>
         <VDivider />
         <VCardActions class="pa-4 flex-wrap gap-2">
           <VBtn
             color="success"
             variant="flat"
-            @click="openWhatsapp(createdCredentials.phone, loginMessage(createdCredentials.name, createdCredentials.phone, createdCredentials.password))"
+            @click="openWhatsapp(createdCredentials.phone, fullMessage(createdCredentials))"
           >
             <VIcon start icon="tabler-brand-whatsapp" />
             Envoyer sur WhatsApp
@@ -763,7 +969,7 @@ const statusConfig = {
           <VBtn
             color="success"
             variant="outlined"
-            @click="copyText(loginMessage(createdCredentials.name, createdCredentials.phone, createdCredentials.password))"
+            @click="copyText(fullMessage(createdCredentials))"
           >
             <VIcon start icon="tabler-copy" />
             Copier
