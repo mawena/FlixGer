@@ -198,10 +198,10 @@ const onPlatformChange = async () => {
   }
 }
 
-// Pré-remplir nom + code éditables depuis le profil sélectionné
+// Pré-remplir nom + code éditables : le profil prend le nom du client par défaut
 const onProfileChange = () => {
   const p = availableProfiles.value.find(x => x.id === subForm.value.profile_id)
-  subForm.value.profile_name = p?.profile_name || ''
+  subForm.value.profile_name = phoneForm.value.name || p?.profile_name || ''
   subForm.value.pin_code = p?.pin_code || ''
 }
 

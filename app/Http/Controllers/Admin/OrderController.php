@@ -45,7 +45,11 @@ class OrderController extends Controller
         $start = Carbon::now();
         $end   = $start->copy()->addMonths($order->duration_months);
 
-        $profile->update(['status' => 'occupied']);
+        // Nommer le profil d'après le client à qui il est affecté.
+        $profile->update([
+            'status'       => 'occupied',
+            'profile_name' => $order->user->name,
+        ]);
 
         $order->update([
             'status'           => 'approved',

@@ -87,6 +87,38 @@ const deleteProfile = async (p) => {
 const statusColor = s => s === 'available' ? 'success' : 'warning'
 const statusLabel = s => s === 'available' ? 'Disponible' : 'Assigné'
 
+// ── WhatsApp : envoi des accès au client relié au profil ──
+const siteUrl = window.location.origin
+
+const normalizePhone = (phone) => {
+  let p = String(phone || '').replace(/\D/g, '')
+  if (p.length === 8) p = `228${p}` // Indicatif Togo par défaut
+  return p
+}
+
+// Un bouton WhatsApp n'a de sens que si le profil est relié à un client ayant un numéro
+const hasWhatsapp = p => !!p.current_order?.user?.phone
+
+const fmtDate = (d) => d ? new Date(d).toLocaleDateString('fr-FR') : '—'
+
+const whatsappMessage = (p) => {
+  const order = p.current_order || {}
+  const user = order.user || {}
+  return `Bonjour ${user.name || ''} 👋\n\n`
+    + `Voici vos accès pour votre abonnement *${p.master_account?.platform?.name || ''}* sur FlixGer :\n\n`
+    + `📧 Email : ${p.master_account?.email || '—'}\n`
+    + `🔒 Mot de passe : ${p.master_account?.password || '—'}\n`
+    + `👤 Profil : ${p.profile_name || '—'}\n`
+    + `🔑 Code PIN : ${p.pin_code || '—'}\n\n`
+    + `📅 Valable jusqu'au : ${fmtDate(order.end_date)}\n\n`
+    + `Retrouvez et gérez vos abonnements sur ${siteUrl} 🎬`
+}
+
+const sendWhatsapp = (p) => {
+  const phone = normalizePhone(p.current_order?.user?.phone)
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(whatsappMessage(p))}`, '_blank')
+}
+
 const pinVisible = reactive({})
 const togglePin = (id) => { pinVisible[id] = !pinVisible[id] }
 const generatePin = () => { form.value.pin_code = String(Math.floor(1000 + Math.random() * 9000)) }
@@ -189,6 +221,17 @@ const generatePin = () => { form.value.pin_code = String(Math.floor(1000 + Math.
         </template>
 
         <template #item.actions="{ item }">
+          <VBtn
+            v-if="hasWhatsapp(item)"
+            icon
+            size="small"
+            variant="text"
+            color="success"
+            @click="sendWhatsapp(item)"
+          >
+            <VIcon icon="tabler-brand-whatsapp" />
+            <VTooltip activator="parent" location="top">Envoyer les accès sur WhatsApp</VTooltip>
+          </VBtn>
           <VBtn icon size="small" variant="text" @click="openEdit(item)">
             <VIcon icon="tabler-edit" />
           </VBtn>

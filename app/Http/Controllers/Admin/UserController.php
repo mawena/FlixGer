@@ -103,11 +103,11 @@ class UserController extends Controller
             ->whereHas('masterAccount', fn($q) => $q->where('platform_id', $sub['platform_id']))
             ->findOrFail($sub['profile_id']);
 
-        // Autoriser la personnalisation du nom du profil et du code PIN si fournis.
-        $profile->fill(array_filter([
-            'profile_name' => $sub['profile_name'] ?? null,
-            'pin_code'     => $sub['pin_code'] ?? null,
-        ]));
+        // Nommer le profil d'après le client (ou le nom personnalisé fourni par l'admin).
+        $profile->profile_name = $sub['profile_name'] ?: $user->name;
+        if (!empty($sub['pin_code'])) {
+            $profile->pin_code = $sub['pin_code'];
+        }
         $profile->status = 'occupied';
         $profile->save();
 
